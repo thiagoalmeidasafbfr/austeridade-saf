@@ -69,11 +69,9 @@ const StatusBadge = ({ status, onClick }) => {
 
 const PhaseBadge = ({ phase, onClick }) => {
   const phaseNum = parseInt(phase) || 3; // Default 3
-  const styles = {
-    1: "bg-emerald-100 text-emerald-800 border-emerald-200 ring-emerald-100",
-    2: "bg-amber-100 text-amber-800 border-amber-200 ring-amber-100",
-    3: "bg-red-100 text-red-800 border-red-200 ring-red-100"
-  };
+  
+  // COR UNIFICADA AZUL PARA TODAS AS FASES
+  const unifiedStyle = "bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100";
 
   return (
     <span 
@@ -83,7 +81,7 @@ const PhaseBadge = ({ phase, onClick }) => {
           onClick(phaseNum);
         }
       }}
-      className={`flex items-center justify-center w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border ring-1 whitespace-nowrap ${styles[phaseNum] || styles[3]} ${onClick ? 'cursor-pointer hover:brightness-95' : ''}`}
+      className={`flex items-center justify-center w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${unifiedStyle} ${onClick ? 'cursor-pointer hover:brightness-95' : ''}`}
       title={`Fase ${phaseNum}`}
     >
       Fase {phaseNum}
@@ -1018,12 +1016,10 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
           <Edit2 size={14} />
         </button>
       </div>
-      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
-         <div className="flex items-center gap-2">
-            {plan.requiresApproval && <ApprovalBadge />}
-            <StatusBadge status={plan.status} />
-         </div>
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+         {plan.requiresApproval && <ApprovalBadge />}
          <PhaseBadge phase={plan.phase} />
+         <StatusBadge status={plan.status} />
       </div>
       <div className="p-6 flex flex-col h-full">
         <div className="mb-4 min-h-[5rem] flex flex-col justify-start border-b border-slate-100 pb-2">
@@ -1498,7 +1494,7 @@ export default function AusterityApp() {
         <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="bg-slate-900 text-white p-1.5 rounded"><LayoutGrid size={20} /></div>
+              <img src="logobotafogo.png" alt="SAF Botafogo" className="h-10 w-auto object-contain" />
               <h1 className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">
                 Plano de Austeridade <span className="text-slate-400 font-normal">| 2026</span>
               </h1>
@@ -1510,11 +1506,11 @@ export default function AusterityApp() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4 text-sm">
-               <div className="hidden lg:block font-serif italic font-bold text-slate-500 text-lg border-b-2 border-slate-200 px-2 pb-0.5 mr-4">
-                  Estrada dos Louros
-               </div>
+            <div className="hidden lg:block font-sans font-extrabold uppercase tracking-tight text-slate-800 text-lg border-b-2 border-slate-200 px-2 pb-0.5 mx-auto">
+               Estrada dos Louros
+            </div>
 
+            <div className="flex items-center gap-4 text-sm">
                <div className="hidden md:flex items-center gap-2">
                  
                  <input type="file" id="excel-input" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
