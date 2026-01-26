@@ -156,7 +156,7 @@ const LoginScreen = ({ onLogin }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (user === 'adminsafbotafogo2026' && pass === 'adminsafbotafogo2026') {
+    if (user === 'admin' && pass === 'admin') {
       onLogin('admin');
     } else if (user === 'user' && pass === 'user') {
       onLogin('user');
@@ -259,8 +259,12 @@ const CommitteePresentation = ({ plans }) => {
     return stats;
   }, [plans]);
 
-  const totalSavings = useMemo(() => {
-    return plans.reduce((acc, p) => acc + (parseFloat(p.savings) || 0), 0);
+  const { totalSavings, totalInvestment } = useMemo(() => {
+    return plans.reduce((acc, p) => {
+      acc.totalSavings += (parseFloat(p.savings) || 0);
+      acc.totalInvestment += (parseFloat(p.investment) || 0);
+      return acc;
+    }, { totalSavings: 0, totalInvestment: 0 });
   }, [plans]);
 
   return (
@@ -544,13 +548,22 @@ const CommitteePresentation = ({ plans }) => {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-1 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-              <div className="text-slate-500 text-[10px] font-bold uppercase mb-2">Economia Estimada 2026</div>
-              <div className="text-2xl font-bold text-blue-600 mb-1">
-                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalSavings)}
+          <div className="md:col-span-1 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between gap-4">
+              <div>
+                  <div className="text-slate-500 text-[10px] font-bold uppercase mb-1">Economia Estimada 2026</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalSavings)}
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+                      <div className="bg-blue-600 h-1.5 rounded-full" style={{width: '100%'}}></div>
+                  </div>
               </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{width: '100%'}}></div>
+              
+              <div className="pt-4 border-t border-slate-100">
+                  <div className="text-slate-500 text-[10px] font-bold uppercase mb-1">Investimento Necessário</div>
+                  <div className="text-xl font-bold text-slate-700">
+                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalInvestment)}
+                  </div>
               </div>
           </div>
 
