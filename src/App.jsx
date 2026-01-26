@@ -6,13 +6,8 @@ import {
   Download, Loader2, Edit2, Save, X, Plus, Trash2, Clock, 
   Table as TableIcon, CheckCircle2, MessageSquare, AlertTriangle, Info,
   ArrowUp, ArrowDown, ArrowUpDown, FileText, Users, Package, CalendarCheck, Presentation,
-  GripVertical
+  GripVertical, Lock, LogOut
 } from 'lucide-react';
-
-// --- ATENÇÃO: Para usar Excel localmente ---
-// 1. Rode no terminal: npm install xlsx
-// 2. Descomente a linha abaixo (remova as duas barras //):
-import * as XLSX from 'xlsx'; 
 
 // --- FIREBASE IMPORTS ---
 import { initializeApp } from 'firebase/app';
@@ -68,9 +63,7 @@ const StatusBadge = ({ status, onClick }) => {
 };
 
 const PhaseBadge = ({ phase, onClick }) => {
-  const phaseNum = parseInt(phase) || 3; // Default 3
-  
-  // COR UNIFICADA AZUL PARA TODAS AS FASES
+  const phaseNum = parseInt(phase) || 3; 
   const unifiedStyle = "bg-blue-50 text-blue-700 border-blue-200 ring-1 ring-blue-100";
 
   return (
@@ -133,7 +126,6 @@ const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
   );
 };
 
-// --- GRÁFICO DE BARRAS SIMPLES ---
 const SimpleBarChart = ({ data }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
   if (total === 0) return <div className="text-[10px] text-slate-400 italic text-center">Sem dados</div>;
@@ -156,9 +148,82 @@ const SimpleBarChart = ({ data }) => {
   );
 };
 
-// --- VISÃO: APRESENTAÇÃO DO COMITÊ ---
+// --- COMPONENTE DE LOGIN ---
+const LoginScreen = ({ onLogin }) => {
+  const [user, setUser] = useState('');
+  const [pass, setPass] = useState('');
+  const [error, setError] = useState('');
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (user === 'adminsafbotafogo2026' && pass === 'adminsafbotafogo2026') {
+      onLogin('admin');
+    } else if (user === 'user' && pass === 'user') {
+      onLogin('user');
+    } else {
+      setError('Credenciais inválidas. Tente novamente.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-slate-50 p-8 border-b border-slate-100 flex flex-col items-center">
+           <img 
+            src="logobotafogo.png" 
+            alt="SAF Botafogo" 
+            className="h-16 w-auto object-contain mb-4" 
+            onError={(e) => { e.target.onerror = null; e.target.src = "https://upload.wikimedia.org/wikipedia/commons/c/cb/Botafogo_de_Futebol_e_Regatas_logo.svg"; }}
+          />
+          <h2 className="text-xl font-bold text-slate-800">Acesso Restrito</h2>
+          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mt-1">Estrada dos Louros</p>
+        </div>
+        <form onSubmit={handleLogin} className="p-8 space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Usuário</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                value={user}
+                onChange={(e) => setUser(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                placeholder="Ex: admin"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Senha</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="password" 
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+                placeholder="••••••"
+              />
+            </div>
+          </div>
+          
+          {error && (
+            <div className="p-3 bg-red-50 text-red-600 text-xs rounded border border-red-100 flex items-center gap-2">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+
+          <button type="submit" className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-transform active:scale-[0.98] shadow-lg shadow-slate-900/20">
+            Entrar no Sistema
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// --- VISÃO: APRESENTAÇÃO ---
 const CommitteePresentation = ({ plans }) => {
-  // 1. Por Pacote
   const plansByPackage = useMemo(() => {
     const grouped = plans.reduce((acc, plan) => {
       const pkg = plan.package || "Outros";
@@ -168,7 +233,6 @@ const CommitteePresentation = ({ plans }) => {
     return Object.entries(grouped).sort((a, b) => b[1] - a[1]);
   }, [plans]);
 
-  // 2. Por Fase (Contagem e Status DETALHADO)
   const statsByPhase = useMemo(() => {
     const stats = { 
       1: { total: 0, completed: 0, inProgress: 0, notStarted: 0 }, 
@@ -201,7 +265,6 @@ const CommitteePresentation = ({ plans }) => {
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      
       <section className="w-full">
         <div className="bg-white p-8 rounded-xl shadow-sm border-l-4 border-blue-600">
           <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
@@ -507,7 +570,7 @@ const CommitteePresentation = ({ plans }) => {
 };
 
 // --- VISÃO EM TABELA ---
-const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) => {
+const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort, userRole }) => {
   const getSortIcon = (key) => {
     const currentSort = sortConfig[0];
     if (!currentSort || currentSort.key !== key) return <ArrowUpDown size={12} className="opacity-30" />;
@@ -569,7 +632,8 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
                     {plan.description && (
                         <div className="group/tooltip relative">
                             <Info size={14} className="text-slate-300 hover:text-blue-500 cursor-help mt-0.5" />
-                            <div className="absolute left-full top-0 ml-2 w-64 p-3 bg-slate-800 text-white text-xs rounded shadow-xl opacity-0 group-hover/tooltip:opacity-100 pointer-events-none z-50 transition-opacity">
+                            {/* TOOLTIP AUMENTADA PARA w-96 */}
+                            <div className="absolute left-full top-0 ml-2 w-96 p-3 bg-slate-800 text-white text-xs rounded shadow-xl opacity-0 group-hover/tooltip:opacity-100 pointer-events-none z-[60] transition-opacity whitespace-normal">
                                 {plan.description}
                             </div>
                         </div>
@@ -616,14 +680,16 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
                   <div className="text-xs text-center text-slate-500 mt-1 font-medium">{plan.progress || 0}%</div>
                 </td>
                 <td className="px-4 py-4 align-middle text-right">
-                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onEdit(plan)} className="text-slate-400 hover:text-blue-600 p-2 rounded hover:bg-blue-50 transition-colors">
-                      <Edit2 size={16} />
-                    </button>
-                    <button onClick={() => onDelete(plan.id)} className="text-slate-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {userRole === 'admin' && (
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => onEdit(plan)} className="text-slate-400 hover:text-blue-600 p-2 rounded hover:bg-blue-50 transition-colors">
+                        <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => onDelete(plan.id)} className="text-slate-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors">
+                        <Trash2 size={16} />
+                        </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -647,7 +713,6 @@ const Dashboard = ({ plans }) => {
   const roi = totalInvestment > 0 ? ((totalSavings - totalInvestment) / totalInvestment) * 100 : 0;
   
   const statusCount = plans.reduce((acc, p) => {
-    // Normalização de status
     let st = (p.status || "Não Iniciado").trim();
     if(st.toLowerCase() === "em andamento") st = "Em Andamento";
     if(st.toLowerCase() === "concluído" || st.toLowerCase() === "concluido") st = "Concluído";
@@ -657,7 +722,6 @@ const Dashboard = ({ plans }) => {
     return acc;
   }, {});
 
-  // Ordena por maior economia, mas mantém todos os itens
   const savingsByArea = Object.entries(plans.reduce((acc, p) => {
     const val = parseFloat(p.savings);
     const safeVal = isNaN(val) ? 0 : val;
@@ -748,13 +812,13 @@ const Dashboard = ({ plans }) => {
 };
 
 // --- VISÃO CARD ---
-const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, onFilter }) => {
+const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, onFilter, userRole }) => {
   const [isEditing, setIsEditing] = useState(startEditing);
   const [showChecklist, setShowChecklist] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [formData, setFormData] = useState(plan);
+  const cardRef = useRef(null); // REFERENCE PARA SCROLL
 
-  // DnD State
   const [draggedItemIndex, setDraggedItemIndex] = useState(null);
 
   useEffect(() => { 
@@ -762,7 +826,6 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     if (startEditing) setIsEditing(true);
   }, [plan, startEditing]);
 
-  // Recalcula progresso automaticamente se houver checklist
   useEffect(() => {
     if (formData.checklist && formData.checklist.length > 0) {
         const completed = formData.checklist.filter(i => i.checked).length;
@@ -774,22 +837,35 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     }
   }, [formData.checklist]);
 
-  const handleSave = () => { onSave(plan.id, formData); setIsEditing(false); if(onCloseEdit) onCloseEdit(); };
-  const handleCancel = () => { setFormData(plan); setIsEditing(false); if(onCloseEdit) onCloseEdit(); };
+  const handleClose = () => {
+    setIsEditing(false);
+    if(onCloseEdit) onCloseEdit();
+    // SCROLL CORRECTION
+    setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  const handleSave = () => { 
+      onSave(plan.id, formData); 
+      handleClose(); 
+  };
+  const handleCancel = () => { 
+      setFormData(plan); 
+      handleClose(); 
+  };
+
   const handleInputChange = (e) => { 
       const { name, value, type, checked } = e.target;
       setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value })); 
   };
 
-  // Checklist Handlers
   const addStep = () => setFormData(prev => ({ ...prev, checklist: [...(prev.checklist || []), { id: `step_${Date.now()}`, text: "", startDate: "", endDate: "", checked: false }] }));
   const removeStep = (id) => setFormData(prev => ({ ...prev, checklist: prev.checklist.filter(s => s.id !== id) }));
   const updateStep = (id, field, val) => setFormData(prev => ({ ...prev, checklist: prev.checklist.map(s => s.id === id ? { ...s, [field]: val } : s) }));
   
-  // DRAG AND DROP HANDLERS - FIXED
   const handleDragStart = (e, index) => {
     setDraggedItemIndex(index);
-    // Firefox requires dataTransfer data to be set
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', e.target.parentNode);
     e.dataTransfer.setDragImage(e.target.parentNode, 20, 20);
@@ -799,14 +875,10 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     if (draggedItemIndex === null) return;
     if (draggedItemIndex === index) return;
     
-    // Create a copy
     const newChecklist = [...formData.checklist];
-    // Remove the dragged item
     const [draggedItem] = newChecklist.splice(draggedItemIndex, 1);
-    // Insert it at the new position
     newChecklist.splice(index, 0, draggedItem);
     
-    // Update state
     setFormData(prev => ({ ...prev, checklist: newChecklist }));
     setDraggedItemIndex(index);
   };
@@ -815,7 +887,6 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     setDraggedItemIndex(null);
   };
 
-  // Atualização direta do checklist na view
   const toggleStepCheck = (stepId, currentStatus) => {
     const newChecklist = plan.checklist.map(s => s.id === stepId ? { ...s, checked: !currentStatus } : s);
     const completed = newChecklist.filter(i => i.checked).length;
@@ -834,7 +905,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
 
   if (isEditing) {
     return (
-      <div className={`bg-white rounded-xl shadow-2xl border-2 border-blue-500 flex flex-col h-full relative z-50 ${startEditing ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-2xl max-h-[90vh]' : ''}`}>
+      <div className={`bg-white rounded-xl shadow-2xl border-2 border-blue-500 flex flex-col h-full relative z-[999] ${startEditing ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-2xl max-h-[90vh]' : ''}`}>
         <div className="p-5 bg-blue-50 border-b border-blue-100 flex flex-col gap-4">
            <div className="flex justify-between items-center">
              <input name="package" value={formData.package} onChange={handleInputChange} className="text-sm font-bold text-blue-600 uppercase bg-transparent border-b border-blue-300 w-1/3 focus:border-blue-600 focus:outline-none" placeholder="PACOTE" />
@@ -918,7 +989,6 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
               </div>
            </div>
 
-           {/* Progresso Manual com Slider (Desabilitado se houver checklist) */}
            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="flex justify-between items-center mb-2">
                  <label className="text-[10px] uppercase font-bold text-slate-500">
@@ -953,7 +1023,6 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
               </div>
            </div>
 
-           {/* Notas */}
            <div className="flex flex-col">
              <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Notas / Observações</label>
              <textarea name="notes" value={formData.notes || ""} onChange={handleInputChange} className="w-full text-sm border border-slate-300 rounded p-2 min-h-[60px]" placeholder="Observações internas..." />
@@ -1010,12 +1079,17 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col group relative overflow-visible ${isDescriptionExpanded ? 'row-span-2' : ''}`}>
-      <div className="absolute top-3 left-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <button onClick={() => setIsEditing(true)} className="p-2 bg-white text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg shadow-sm hover:shadow">
-          <Edit2 size={14} />
-        </button>
-      </div>
+    <div 
+        ref={cardRef} 
+        className={`bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col group relative overflow-visible ${isDescriptionExpanded ? 'row-span-2' : ''}`}
+    >
+      {userRole === 'admin' && (
+        <div className="absolute top-3 left-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <button onClick={() => setIsEditing(true)} className="p-2 bg-white text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg shadow-sm hover:shadow">
+            <Edit2 size={14} />
+            </button>
+        </div>
+      )}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
          {plan.requiresApproval && <ApprovalBadge />}
          <PhaseBadge phase={plan.phase} />
@@ -1083,7 +1157,6 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                 </button>
              ) : <div className="text-[10px] text-slate-300 italic">Sem checklist</div>}
              
-             {/* Note Icon Tooltip */}
              {hasNotes && (
                <div className="relative group/note z-50">
                   <div className={`cursor-help flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase transition-transform hover:scale-105 shadow-sm bg-amber-50 text-amber-800 border-amber-200`}>
@@ -1104,8 +1177,9 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                    <div key={step.id} className="flex flex-col gap-1 p-2 border border-slate-100 rounded hover:border-blue-200 transition-colors bg-white">
                      <div className="flex items-start gap-3">
                        <button 
-                          onClick={() => toggleStepCheck(step.id, step.checked)}
-                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all flex-shrink-0 ${step.checked ? 'bg-blue-600 border-blue-600 shadow-sm' : 'bg-white border-slate-300 hover:border-blue-400'}`}
+                          onClick={() => userRole === 'admin' && toggleStepCheck(step.id, step.checked)}
+                          disabled={userRole !== 'admin'}
+                          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all flex-shrink-0 ${step.checked ? 'bg-blue-600 border-blue-600 shadow-sm' : 'bg-white border-slate-300'} ${userRole === 'admin' ? 'hover:border-blue-400 cursor-pointer' : 'cursor-default opacity-70'}`}
                        >
                          {step.checked && <CheckSquare size={10} className="text-white" strokeWidth={4} />}
                        </button>
@@ -1117,8 +1191,9 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                            <input 
                              type="date" 
                              value={step.startDate || ""} 
-                             onChange={(e) => updateStepDate(step.id, 'startDate', e.target.value)}
-                             className="text-[10px] text-slate-500 border-none p-0 focus:ring-0 bg-transparent h-auto w-20"
+                             onChange={(e) => userRole === 'admin' && updateStepDate(step.id, 'startDate', e.target.value)}
+                             disabled={userRole !== 'admin'}
+                             className="text-[10px] text-slate-500 border-none p-0 focus:ring-0 bg-transparent h-auto w-20 disabled:bg-transparent"
                            />
                         </div>
                         <div className="flex items-center gap-1">
@@ -1126,8 +1201,9 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                            <input 
                              type="date" 
                              value={step.endDate || ""} 
-                             onChange={(e) => updateStepDate(step.id, 'endDate', e.target.value)}
-                             className="text-[10px] text-slate-500 border-none p-0 focus:ring-0 bg-transparent h-auto w-20"
+                             onChange={(e) => userRole === 'admin' && updateStepDate(step.id, 'endDate', e.target.value)}
+                             disabled={userRole !== 'admin'}
+                             className="text-[10px] text-slate-500 border-none p-0 focus:ring-0 bg-transparent h-auto w-20 disabled:bg-transparent"
                            />
                         </div>
                      </div>
@@ -1144,11 +1220,14 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
 // --- COMPONENTE PRINCIPAL ---
 export default function AusterityApp() {
   const [plans, setPlans] = useState([]);
-  const [currentView, setCurrentView] = useState('list'); 
+  const [currentView, setCurrentView] = useState('presentation'); // ORDEM ALTERADA
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [editingPlan, setEditingPlan] = useState(null);
   const [sortConfig, setSortConfig] = useState([]);
+  
+  // ESTADOS DE LOGIN E ROLE
+  const [appRole, setAppRole] = useState(null); // 'admin' | 'user' | null
 
   // Inject SheetJS CDN dynamically
   useEffect(() => {
@@ -1161,7 +1240,6 @@ export default function AusterityApp() {
     }
   }, []);
 
-  // Filtros
   const [filters, setFilters] = useState({
     package: '', area: '', leader: '', search: '', status: '', approval: '', phase: ''
   });
@@ -1185,7 +1263,6 @@ export default function AusterityApp() {
     return () => unsubscribe();
   }, [user]);
 
-  // Função helper para setar filtros vindo dos cards
   const handleFilterFromCard = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1195,7 +1272,6 @@ export default function AusterityApp() {
     setFilters(prev => ({ ...prev, [field]: '' }));
   };
 
-  // Funções de Ordenação (Simplificada)
   const handleSort = (key) => {
     setSortConfig(prevConfig => {
       const currentSort = prevConfig[0];
@@ -1207,7 +1283,6 @@ export default function AusterityApp() {
     });
   };
 
-  // Funcao para formatar data do Excel
   const formatExcelDate = (value) => {
     if (!value) return "";
     if (typeof value === 'number' && value > 20000) {
@@ -1218,13 +1293,12 @@ export default function AusterityApp() {
     return value;
   };
 
-  // EXPORTAÇÃO EXCEL ATUALIZADA (Usando window.XLSX)
   const handleExportData = () => {
     if (typeof window.XLSX === 'undefined') {
       alert("A biblioteca 'xlsx' ainda está carregando ou falhou. Tente novamente em alguns segundos.");
       return; 
     }
-    const XLSX = window.XLSX; // Use global
+    const XLSX = window.XLSX;
 
     const dataToExport = [];
     (plans.length > 0 ? plans : []).forEach(p => {
@@ -1407,7 +1481,6 @@ export default function AusterityApp() {
   const uniqueAreas = useMemo(() => [...new Set(plans.map(p => p.area).filter(Boolean))], [plans]);
   const uniqueLeaders = useMemo(() => [...new Set(plans.map(p => p.leader).filter(Boolean))], [plans]);
 
-  // Filtering Logic (Corrigida para evitar erros de espaço/case)
   const filteredPlans = useMemo(() => {
     return plans.filter(plan => {
       const pStatus = (plan.status || "").toLowerCase().trim();
@@ -1432,7 +1505,6 @@ export default function AusterityApp() {
     });
   }, [plans, filters]);
 
-  // Sorting Logic
   const sortedPlans = useMemo(() => {
     if (sortConfig.length === 0) return filteredPlans;
 
@@ -1481,6 +1553,9 @@ export default function AusterityApp() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-10">
       
+      {/* TELA DE LOGIN OVERLAY */}
+      {!appRole && <LoginScreen onLogin={(role) => setAppRole(role)} />}
+
       {editingPlan && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-2xl h-[90vh]">
@@ -1490,6 +1565,7 @@ export default function AusterityApp() {
               onSave={handleSavePlan} 
               onDelete={(id) => { handleDeletePlan(id); setEditingPlan(null); }}
               onCloseEdit={() => setEditingPlan(null)}
+              userRole={appRole}
             />
           </div>
         </div>
@@ -1499,15 +1575,23 @@ export default function AusterityApp() {
         <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <img src="logobotafogo.png" alt="SAF Botafogo" className="h-10 w-auto object-contain" />
+              <img 
+                src="logobotafogo.png" 
+                alt="SAF Botafogo" 
+                className="h-10 w-auto object-contain" 
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://upload.wikimedia.org/wikipedia/commons/c/cb/Botafogo_de_Futebol_e_Regatas_logo.svg";
+                }}
+              />
               <h1 className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block">
                 Plano de Austeridade <span className="text-slate-400 font-normal">| 2026</span>
               </h1>
               <div className="flex bg-slate-100 rounded-lg p-1 ml-4 border border-slate-200">
+                <button onClick={() => setCurrentView('presentation')} className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-all ${currentView === 'presentation' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><Presentation size={14}/> Apresentação</button>
                 <button onClick={() => setCurrentView('list')} className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-all ${currentView === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={14}/> Cards</button>
                 <button onClick={() => setCurrentView('table')} className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-all ${currentView === 'table' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><TableIcon size={14}/> Tabela</button>
                 <button onClick={() => setCurrentView('dashboard')} className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-all ${currentView === 'dashboard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><BarChart3 size={14}/> Dashboard</button>
-                <button onClick={() => setCurrentView('presentation')} className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-all ${currentView === 'presentation' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><Presentation size={14}/> Apresentação</button>
               </div>
             </div>
 
@@ -1518,22 +1602,30 @@ export default function AusterityApp() {
             <div className="flex items-center gap-4 text-sm">
                <div className="hidden md:flex items-center gap-2">
                  
-                 <input type="file" id="excel-input" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
-                 <button onClick={() => document.getElementById('excel-input').click()} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors">
-                   <Upload size={14} /> Importar Excel
-                 </button>
+                 {appRole === 'admin' && (
+                   <>
+                     <input type="file" id="excel-input" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
+                     <button onClick={() => document.getElementById('excel-input').click()} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors">
+                       <Upload size={14} /> Importar Excel
+                     </button>
+                   </>
+                 )}
 
                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
                  <button onClick={handleExportData} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded hover:bg-blue-100 transition-colors">
                    <Download size={14} /> Exportar Dados
                  </button>
-                 <div className="h-4 w-px bg-slate-300 mx-1"></div>
-                 <button onClick={handleClearDatabase} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded hover:bg-red-100 transition-colors">
-                   <Trash2 size={14} /> Limpar Base
-                 </button>
+                 
+                 {appRole === 'admin' && (
+                   <>
+                     <div className="h-4 w-px bg-slate-300 mx-1"></div>
+                     <button onClick={handleClearDatabase} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded hover:bg-red-100 transition-colors">
+                       <Trash2 size={14} /> Limpar Base
+                     </button>
+                   </>
+                 )}
                </div>
                
-               {/* Added Filtered Investment */}
                <div className="hidden md:block text-right border-r border-slate-200 pr-4 mr-1">
                  <p className="text-slate-500 text-[10px] uppercase font-bold">Inv. Nec. Filtrado</p>
                  <p className="text-slate-800 font-bold text-base">
@@ -1547,6 +1639,17 @@ export default function AusterityApp() {
                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalSavings)}
                  </p>
                </div>
+
+               {/* LOGOUT BUTTON */}
+               {appRole && (
+                 <button 
+                    onClick={() => setAppRole(null)}
+                    className="ml-2 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    title="Sair"
+                 >
+                    <LogOut size={18} />
+                 </button>
+               )}
             </div>
           </div>
         </div>
@@ -1625,7 +1728,7 @@ export default function AusterityApp() {
              </span>
            </div>
            
-           {!loading && (currentView === 'list' || currentView === 'table') && (
+           {!loading && (currentView === 'list' || currentView === 'table') && appRole === 'admin' && (
               <button 
                 onClick={handleCreatePlan}
                 className="flex items-center gap-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded shadow-sm"
@@ -1657,6 +1760,7 @@ export default function AusterityApp() {
                           onSave={handleSavePlan} 
                           onDelete={handleDeletePlan} 
                           onFilter={handleFilterFromCard} 
+                          userRole={appRole}
                         />
                       ))}
                     </div>
@@ -1667,7 +1771,9 @@ export default function AusterityApp() {
                     <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3"><Search size={24} /></div>
                     <h3 className="text-lg font-medium text-slate-900">Nenhuma ação encontrada</h3>
                     <p className="text-slate-500 mb-4">Seu banco de dados parece vazio ou o filtro não retornou resultados.</p>
-                    <button onClick={() => document.getElementById('excel-input').click()} className="text-blue-600 font-medium hover:underline">Importar Excel</button>
+                    {appRole === 'admin' && (
+                        <button onClick={() => document.getElementById('excel-input').click()} className="text-blue-600 font-medium hover:underline">Importar Excel</button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1682,6 +1788,7 @@ export default function AusterityApp() {
                    onFilter={handleFilterFromCard}
                    sortConfig={sortConfig}
                    onSort={handleSort}
+                   userRole={appRole}
                  />
                ) : (
                  <div className="text-center py-20 text-slate-500">Nenhum dado para exibir na tabela.</div>
