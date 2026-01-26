@@ -12,7 +12,7 @@ import {
 // --- ATENÇÃO: Para usar Excel localmente ---
 // 1. Rode no terminal: npm install xlsx
 // 2. Descomente a linha abaixo (remova as duas barras //):
- import * as XLSX from 'xlsx'; 
+import * as XLSX from 'xlsx'; 
 
 // --- FIREBASE IMPORTS ---
 import { initializeApp } from 'firebase/app';
@@ -1462,6 +1462,11 @@ export default function AusterityApp() {
       return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
+  const totalInvestmentFiltered = sortedPlans.reduce((acc, p) => {
+      const val = parseFloat(p.investment);
+      return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
   const groupedPlans = useMemo(() => {
     if (currentView !== 'list') return null;
     const groups = sortedPlans.reduce((acc, plan) => {
@@ -1527,6 +1532,15 @@ export default function AusterityApp() {
                    <Trash2 size={14} /> Limpar Base
                  </button>
                </div>
+               
+               {/* Added Filtered Investment */}
+               <div className="hidden md:block text-right border-r border-slate-200 pr-4 mr-1">
+                 <p className="text-slate-500 text-[10px] uppercase font-bold">Inv. Nec. Filtrado</p>
+                 <p className="text-slate-800 font-bold text-base">
+                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(totalInvestmentFiltered)}
+                 </p>
+               </div>
+
                <div className="hidden md:block text-right border-r border-slate-200 pr-4 mr-1">
                  <p className="text-slate-500 text-[10px] uppercase font-bold">Economia Filtrada</p>
                  <p className="text-emerald-600 font-bold text-base">
