@@ -156,7 +156,7 @@ const LoginScreen = ({ onLogin }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (user === 'admin' && pass === 'admin') {
+    if (user === 'adminsafbotafogo2026' && pass === 'adminsafbotafogo2026') {
       onLogin('admin');
     } else if (user === 'user' && pass === 'user') {
       onLogin('user');
