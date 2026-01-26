@@ -5,20 +5,13 @@ import {
   List, Upload, BarChart3, PieChart, TrendingUp, Target, 
   Download, Loader2, Edit2, Save, X, Plus, Trash2, Clock, 
   Table as TableIcon, CheckCircle2, MessageSquare, AlertTriangle, Info,
-  ArrowUp, ArrowDown, ArrowUpDown, FileText, Users, Package, CalendarCheck, Presentation,
-  FileDown // Ícone para PDF
+  ArrowUp, ArrowDown, ArrowUpDown, FileText, Users, Package, CalendarCheck, Presentation
 } from 'lucide-react';
 
 // --- ATENÇÃO: Para usar Excel localmente ---
 // 1. Rode no terminal: npm install xlsx
 // 2. Descomente a linha abaixo (remova as duas barras //):
  import * as XLSX from 'xlsx'; 
-
-// --- ATENÇÃO: Para usar PDF (html2canvas) localmente ---
-// 1. Rode no terminal: npm install html2canvas jspdf
-// 2. Descomente as linhas abaixo:
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 // --- FIREBASE IMPORTS ---
 import { initializeApp } from 'firebase/app';
@@ -76,6 +69,7 @@ const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
      displayValue = String(value || "R$ 0,00");
   }
 
+  // Hierarquia de tamanho
   const sizeClasses = { 
     xs: "text-xs",
     sm: "text-sm", 
@@ -94,9 +88,11 @@ const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
   );
 };
 
-// --- NOVA VISÃO: APRESENTAÇÃO DO COMITÊ ---
+// --- NOVA VISÃO: APRESENTAÇÃO DO COMITÊ (COM DADOS REAIS) ---
 const CommitteePresentation = ({ plans }) => {
-  // Cálculos de Agregação
+  // --- Cálculos de Agregação ---
+  
+  // 1. Por Pacote
   const plansByPackage = useMemo(() => {
     const grouped = plans.reduce((acc, plan) => {
       const pkg = plan.package || "Outros";
@@ -106,10 +102,12 @@ const CommitteePresentation = ({ plans }) => {
     return Object.entries(grouped).sort((a, b) => b[1] - a[1]);
   }, [plans]);
 
+  // 2. Por Fase (Contagem e Status)
   const statsByPhase = useMemo(() => {
     const stats = { 1: { total: 0, inProgress: 0, pending: 0 }, 2: { total: 0, inProgress: 0, pending: 0 }, 3: { total: 0, inProgress: 0, pending: 0 } };
+    
     plans.forEach(plan => {
-      const phase = plan.phase && [1, 2, 3].includes(parseInt(plan.phase)) ? parseInt(plan.phase) : 3; 
+      const phase = plan.phase && [1, 2, 3].includes(parseInt(plan.phase)) ? parseInt(plan.phase) : 3; // Default to 3 if invalid
       if(stats[phase]) {
         stats[phase].total += 1;
         if(plan.status === 'Em Andamento' || plan.status === 'Concluído') {
@@ -122,12 +120,14 @@ const CommitteePresentation = ({ plans }) => {
     return stats;
   }, [plans]);
 
+  // 3. Economia Total
   const totalSavings = useMemo(() => {
     return plans.reduce((acc, p) => acc + (parseFloat(p.savings) || 0), 0);
   }, [plans]);
 
   return (
-    <div id="presentation-content" className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20 bg-slate-50 p-4">
+    <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+      
       {/* 1. O Plano */}
       <section className="w-full">
         <div className="bg-white p-8 rounded-xl shadow-sm border-l-4 border-blue-600">
@@ -137,24 +137,27 @@ const CommitteePresentation = ({ plans }) => {
             </div>
             <h2 className="font-bold text-2xl text-slate-800">O Plano</h2>
           </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 flex flex-col justify-center">
               <p className="text-sm text-slate-600 leading-relaxed text-justify">
-                O Plano de Austeridade Financeira define estratégias para otimizar as despesas da SAF Botafogo. Após um ciclo de intenso crescimento e investimentos estruturais, iniciamos agora um novo estágio focado na eficiência operacional.
+                O Plano de Austeridade Financeira define estratégias para otimizar as despesas da SAF Botafogo. Após um ciclo de intenso crescimento e investimentos estruturais, iniciamos agora um novo estágio focado na eficiência operacional, com um olhar atento para a redução de custos e maximização dos recursos, garantindo a sustentabilidade do projeto a longo prazo.
               </p>
             </div>
+
             <div className="lg:col-span-2 lg:border-l border-slate-100 lg:pl-8 pt-6 lg:pt-0 border-t lg:border-t-0 flex flex-col justify-center">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
                   <h4 className="text-xs font-bold text-blue-600 uppercase mb-2 tracking-wide">Levantamento (Dez/24)</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Em dezembro de 2024, foram realizadas diversas reuniões estratégicas com diferentes áreas da SAF Botafogo.
+                    Em dezembro de 2024, foram realizadas diversas reuniões estratégicas com diferentes áreas da SAF Botafogo. Durante este período, iniciativas foram amplamente discutidas e ações de eficiência foram submetidas pelos departamentos.
                   </p>
                 </div>
+                
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors">
                   <h4 className="text-xs font-bold text-indigo-600 uppercase mb-2 tracking-wide">Análise e Validação</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    As propostas foram analisadas pela comissão designada para acompanhamento e integradas a este plano.
+                    As propostas foram analisadas pela comissão designada para acompanhamento. Agora, as ações validadas estão sendo oficialmente integradas a este plano para início da execução e monitoramento.
                   </p>
                 </div>
               </div>
@@ -168,8 +171,10 @@ const CommitteePresentation = ({ plans }) => {
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
           <Users className="text-slate-700" /> Comissão de Acompanhamento
         </h2>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Grupo 1 */}
+          
+          {/* Grupo 1: Suprimentos */}
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50">
             <div className="text-xs text-slate-400 font-bold uppercase mb-3 text-center">Liderança & Suprimentos</div>
             <div className="space-y-3">
@@ -191,7 +196,8 @@ const CommitteePresentation = ({ plans }) => {
               </div>
             </div>
           </div>
-          {/* Grupo 2 */}
+
+          {/* Grupo 2: Financeiro */}
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50">
             <div className="text-xs text-slate-400 font-bold uppercase mb-3 text-center">Financeiro & Controladoria</div>
             <div className="space-y-3">
@@ -213,7 +219,8 @@ const CommitteePresentation = ({ plans }) => {
               </div>
             </div>
           </div>
-          {/* Grupo 3 */}
+
+          {/* Grupo 3: Acompanhamento */}
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50">
             <div className="text-xs text-slate-400 font-bold uppercase mb-3 text-center">Acompanhamento (PMO)</div>
             <div className="space-y-3">
@@ -235,6 +242,37 @@ const CommitteePresentation = ({ plans }) => {
               </div>
             </div>
           </div>
+
+        </div>
+
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-600 pl-2 border-l-4 border-slate-300">
+           Representantes de Áreas Chave
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+              <img src="https://ui-avatars.com/api/?name=Leonardo+Coelho&background=94a3b8&color=fff&size=128" alt="Leonardo" className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Futebol</p>
+                <h3 className="font-bold text-slate-800 text-sm">Leonardo Coelho</h3>
+                <p className="text-[10px] text-slate-500">Dir. Coord. Futebol</p>
+              </div>
+           </div>
+           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+              <img src="https://ui-avatars.com/api/?name=Pedro+Tardin&background=94a3b8&color=fff&size=128" alt="Pedro" className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Operações</p>
+                <h3 className="font-bold text-slate-800 text-sm">Pedro Tardin</h3>
+                <p className="text-[10px] text-slate-500">Diretor de Operações</p>
+              </div>
+           </div>
+           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+              <img src="https://ui-avatars.com/api/?name=Lucas+Pires&background=94a3b8&color=fff&size=128" alt="Lucas" className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Matchday</p>
+                <h3 className="font-bold text-slate-800 text-sm">Lucas Pires</h3>
+                <p className="text-[10px] text-slate-500">Ger. Plan. Arena</p>
+              </div>
+           </div>
         </div>
       </section>
 
@@ -245,10 +283,12 @@ const CommitteePresentation = ({ plans }) => {
                 <Package className="text-slate-700" /> Pacotes de Ações
             </h2>
         </div>
+
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <p className="text-slate-600 mb-6 text-sm">
-                Foram mapeadas e estruturadas <strong>{plans.length} ações</strong> estratégicas de austeridade.
+                Foram mapeadas e estruturadas <strong>{plans.length} ações</strong> estratégicas de austeridade, divididas em <strong>{plansByPackage.length} pacotes</strong> temáticos para facilitar a gestão e implementação.
             </p>
+
             <div className="overflow-hidden rounded-lg border border-slate-200">
                 <table className="min-w-full bg-white">
                     <thead className="bg-slate-50 border-b border-slate-200">
@@ -280,6 +320,7 @@ const CommitteePresentation = ({ plans }) => {
               <Clock className="text-slate-700" /> Visão Temporal
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 rounded-lg overflow-hidden border border-slate-200">
+              
               <div className="bg-emerald-50 p-6 border-b md:border-b-0 md:border-r border-emerald-100">
                   <div className="flex items-center gap-3 mb-4">
                       <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
@@ -297,6 +338,7 @@ const CommitteePresentation = ({ plans }) => {
                       <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-500"/> <strong>{statsByPhase[1].pending}</strong> a iniciar</li>
                   </ul>
               </div>
+
               <div className="bg-amber-50 p-6 border-b md:border-b-0 md:border-r border-amber-100">
                   <div className="flex items-center gap-3 mb-4">
                       <span className="bg-amber-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
@@ -314,6 +356,7 @@ const CommitteePresentation = ({ plans }) => {
                       <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-amber-500"/> <strong>{statsByPhase[2].pending}</strong> a iniciar</li>
                   </ul>
               </div>
+
               <div className="bg-red-50 p-6">
                   <div className="flex items-center gap-3 mb-4">
                       <span className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
@@ -334,7 +377,7 @@ const CommitteePresentation = ({ plans }) => {
           </div>
       </section>
 
-      {/* 5. Governança */}
+      {/* 5. Governança (DADOS VIVOS) */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-1 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
               <div className="text-slate-500 text-[10px] font-bold uppercase mb-2">Economia Estimada 2026</div>
@@ -345,13 +388,18 @@ const CommitteePresentation = ({ plans }) => {
                   <div className="bg-blue-600 h-2 rounded-full" style={{width: '100%'}}></div>
               </div>
           </div>
+
           <div className="md:col-span-3 bg-slate-800 text-slate-300 p-8 rounded-xl shadow-md flex flex-col justify-center">
               <h3 className="text-white font-bold text-xl mb-4 flex items-center gap-2"><CalendarCheck className="text-blue-400"/> Acompanhamento</h3>
               <p className="text-base text-slate-200 leading-relaxed font-light">
-                  Será realizada reunião mensal com os 16 líderes de iniciativas para acompanhamento da implementação de cada ação.
+                  Será realizada reunião mensal com os 16 líderes de iniciativas para acompanhamento da implementação de cada ação, a ser reportado na Reunião Geral de Resultados.
               </p>
           </div>
       </section>
+
+      <footer className="text-center text-slate-400 text-[10px] py-8">
+          <p>Plano de Ação de Austeridade Financeira © 2026</p>
+      </footer>
     </div>
   );
 };
@@ -359,8 +407,11 @@ const CommitteePresentation = ({ plans }) => {
 // --- VISÃO EM TABELA ---
 const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) => {
   const getSortIcon = (key) => {
+    // Agora apenas verifica se a chave atual é igual à chave clicada para mostrar o ícone
+    // Suportando apenas ordenação simples (um critério por vez)
     const currentSort = sortConfig[0];
     if (!currentSort || currentSort.key !== key) return <ArrowUpDown size={12} className="opacity-30" />;
+    
     return (
       <div className="flex items-center">
         {currentSort.direction === 'asc' ? <ArrowUp size={12} className="text-blue-600" /> : <ArrowDown size={12} className="text-blue-600" />}
@@ -972,12 +1023,23 @@ export default function AusterityApp() {
     });
   };
 
+  // Funcao para formatar data do Excel
+  const formatExcelDate = (value) => {
+    if (!value) return "";
+    if (typeof value === 'number' && value > 20000) {
+       const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+       date.setSeconds(date.getSeconds() + 10); 
+       return date.toLocaleDateString('pt-BR'); 
+    }
+    return value;
+  };
+
+  // EXPORTAÇÃO EXCEL ATUALIZADA
   const handleExportData = () => {
-    // Check xlsx (COMENTADO PARA PREVIEW - DESCOMENTE PARA PROD LOCAL)
-    /* if (typeof XLSX === 'undefined') {
+    if (typeof XLSX === 'undefined') {
       alert("A biblioteca 'xlsx' não está ativa. No modo preview, baixando CSV simples.");
       return; 
-    } */
+    }
 
     const dataToExport = [];
     (plans.length > 0 ? plans : []).forEach(p => {
@@ -1025,14 +1087,10 @@ export default function AusterityApp() {
         dataToExport.push({ "Título": "Exemplo" });
     }
 
-    // SIMULAÇÃO DE DOWNLOAD NO PREVIEW (JÁ QUE XLSX NÃO ESTÁ DISPONÍVEL)
-    // EM PRODUÇÃO: USE XLSX.utils.json_to_sheet(...)
-    alert("Função de exportação Excel simulada no preview. No ambiente local, descomente o código da biblioteca XLSX.");
-  };
-
-  const handleExportPDF = async () => {
-    // Simulação de PDF
-    window.print();
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dados_Normalizados");
+    XLSX.writeFile(wb, "plano_austeridade_completo.xlsx");
   };
 
   const handleSavePlan = async (id, updatedData) => {
@@ -1081,6 +1139,7 @@ export default function AusterityApp() {
     finally { setLoading(false); }
   };
 
+  // IMPORTAÇÃO EXCEL ATUALIZADA
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1089,10 +1148,74 @@ export default function AusterityApp() {
       alert("A biblioteca 'xlsx' não foi carregada. No ambiente de preview, esta função está desabilitada. Localmente, certifique-se de ter descomentado a importação.");
       return;
     }
-    // ... restante do código de importação
-  };
 
-  // ... (Restante das funções auxiliares)
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) { alert("Planilha vazia."); return; }
+
+        const batch = writeBatch(db);
+        let count = 0;
+        const groupedPlans = {};
+
+        data.forEach(row => {
+          const title = row['Título'] || row['Title'] || "Sem Título";
+          
+          if (!groupedPlans[title]) {
+             groupedPlans[title] = {
+                title: title,
+                package: row['Pacote'] || row['Package'] || "Geral",
+                area: row['Área'] || row['Area'] || "Geral",
+                leader: row['Líder do Projeto'] || row['Leader'] || "A definir",
+                description: row['Descrição'] || row['Description'] || "",
+                supplier: row['Fornecedor'] || row['Supplier'] || "",
+                startDate: formatExcelDate(row['Data Início'] || row['Start Date']),
+                endDate: formatExcelDate(row['Data Fim'] || row['End Date']),
+                phase: row['Fase'] || row['Phase'] || 1,
+                investment: row['Investimento Necessário'] || row['Investment'] || 0,
+                cost2025: row['Custo em 2025'] || row['Cost 2025'] || 0,
+                savings: row['Economia Esperada'] || row['Expected Savings'] || 0,
+                status: row['Status'] || "Não Iniciado",
+                notes: row['Notas'] || row['Notes'] || "",
+                requiresApproval: (row['Requer Aprovação?'] === 'Sim'),
+                progress: row['Progresso (%)'] || row['Progresso'] || 0,
+                checklist: []
+             };
+          }
+          const stepDesc = row['Etapa - Descrição'] || row['Etapa Descrição'];
+          if (stepDesc) {
+             groupedPlans[title].checklist.push({
+                id: `step_${Date.now()}_${Math.random()}`,
+                text: stepDesc,
+                startDate: formatExcelDate(row['Etapa - Data Início'] || row['Etapa Início']),
+                endDate: formatExcelDate(row['Etapa - Data Fim'] || row['Etapa Fim']),
+                checked: (row['Etapa - Concluída?'] || row['Etapa Concluída']) === 'Sim'
+             });
+          }
+        });
+
+        Object.values(groupedPlans).forEach(planData => {
+           const newDocRef = doc(collection(db, "plans"));
+           batch.set(newDocRef, planData);
+           count++;
+        });
+
+        await batch.commit();
+        alert(`${count} planos importados com sucesso!`);
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao processar Excel.");
+      }
+      e.target.value = null; 
+    };
+    reader.readAsBinaryString(file);
+  };
 
   const uniquePackages = useMemo(() => [...new Set(plans.map(p => p.package).filter(Boolean))], [plans]);
   const uniqueAreas = useMemo(() => [...new Set(plans.map(p => p.area).filter(Boolean))], [plans]);
@@ -1203,9 +1326,6 @@ export default function AusterityApp() {
                  <button onClick={handleExportData} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded hover:bg-blue-100 transition-colors">
                    <Download size={14} /> Exportar Dados
                  </button>
-                 <button onClick={handleExportPDF} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors">
-                   <FileDown size={14} /> Exportar PDF
-                 </button>
                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
                  <button onClick={handleClearDatabase} className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded hover:bg-red-100 transition-colors">
                    <Trash2 size={14} /> Limpar Base
@@ -1221,7 +1341,6 @@ export default function AusterityApp() {
           </div>
         </div>
         
-        {/* Barra de Filtros */}
         <div className="bg-slate-50 border-b border-slate-200 py-3">
           <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3">
