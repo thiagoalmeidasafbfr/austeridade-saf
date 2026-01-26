@@ -39,28 +39,69 @@ const auth = getAuth(app);
 
 // --- COMPONENTES AUXILIARES ---
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, onClick }) => {
   const safeStatus = String(status || "Não Iniciado").trim();
   const colors = {
     "Em Andamento": "bg-amber-50 text-amber-700 border-amber-200 ring-1 ring-amber-100",
     "Não Iniciado": "bg-slate-50 text-slate-600 border-slate-200 ring-1 ring-slate-100",
     "Concluído": "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100"
   };
-  // Fallback para status com casing diferente
+  
   let matchedColor = colors["Não Iniciado"];
   Object.keys(colors).forEach(key => {
     if (key.toLowerCase() === safeStatus.toLowerCase()) matchedColor = colors[key];
   });
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${matchedColor}`}>
+    <span 
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick(safeStatus);
+        }
+      }}
+      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${matchedColor} ${onClick ? 'cursor-pointer hover:brightness-95' : ''}`}
+    >
       {safeStatus}
     </span>
   );
 };
 
-const ApprovalBadge = () => (
-  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-100" title="Esta ação requer aprovação da diretoria">
+const PhaseBadge = ({ phase, onClick }) => {
+  const phaseNum = parseInt(phase) || 3; // Default 3
+  const styles = {
+    1: "bg-emerald-100 text-emerald-800 border-emerald-200 ring-emerald-100",
+    2: "bg-amber-100 text-amber-800 border-amber-200 ring-amber-100",
+    3: "bg-red-100 text-red-800 border-red-200 ring-red-100"
+  };
+
+  return (
+    <span 
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick(phaseNum);
+        }
+      }}
+      className={`flex items-center justify-center w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border ring-1 whitespace-nowrap ${styles[phaseNum] || styles[3]} ${onClick ? 'cursor-pointer hover:brightness-95' : ''}`}
+      title={`Fase ${phaseNum}`}
+    >
+      Fase {phaseNum}
+    </span>
+  );
+};
+
+const ApprovalBadge = ({ onClick }) => (
+  <span 
+    onClick={(e) => {
+      if (onClick) {
+        e.stopPropagation();
+        onClick('yes');
+      }
+    }}
+    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap bg-orange-50 text-orange-700 border-orange-200 ring-1 ring-orange-100 ${onClick ? 'cursor-pointer hover:brightness-95' : ''}`} 
+    title="Esta ação requer aprovação da diretoria"
+  >
     <AlertTriangle size={10} strokeWidth={3} />
     Requer Aprovação
   </span>
@@ -76,7 +117,6 @@ const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
      displayValue = String(value || "R$ 0,00");
   }
 
-  // Hierarquia de tamanho
   const sizeClasses = { 
     xs: "text-xs",
     sm: "text-sm", 
@@ -118,10 +158,8 @@ const SimpleBarChart = ({ data }) => {
   );
 };
 
-// --- NOVA VISÃO: APRESENTAÇÃO DO COMITÊ (ATUALIZADA) ---
+// --- VISÃO: APRESENTAÇÃO DO COMITÊ ---
 const CommitteePresentation = ({ plans }) => {
-  // --- Cálculos de Agregação ---
-  
   // 1. Por Pacote
   const plansByPackage = useMemo(() => {
     const grouped = plans.reduce((acc, plan) => {
@@ -134,7 +172,6 @@ const CommitteePresentation = ({ plans }) => {
 
   // 2. Por Fase (Contagem e Status DETALHADO)
   const statsByPhase = useMemo(() => {
-    // Inicializa estrutura
     const stats = { 
       1: { total: 0, completed: 0, inProgress: 0, notStarted: 0 }, 
       2: { total: 0, completed: 0, inProgress: 0, notStarted: 0 }, 
@@ -142,11 +179,9 @@ const CommitteePresentation = ({ plans }) => {
     };
     
     plans.forEach(plan => {
-      // Normaliza fase
       let phase = parseInt(plan.phase);
-      if (![1, 2, 3].includes(phase)) phase = 3; // Default
+      if (![1, 2, 3].includes(phase)) phase = 3; 
 
-      // Normaliza Status
       const status = (plan.status || "").toLowerCase().trim();
 
       stats[phase].total += 1;
@@ -162,7 +197,6 @@ const CommitteePresentation = ({ plans }) => {
     return stats;
   }, [plans]);
 
-  // 3. Economia Total
   const totalSavings = useMemo(() => {
     return plans.reduce((acc, p) => acc + (parseFloat(p.savings) || 0), 0);
   }, [plans]);
@@ -170,7 +204,6 @@ const CommitteePresentation = ({ plans }) => {
   return (
     <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       
-      {/* 1. O Plano */}
       <section className="w-full">
         <div className="bg-white p-8 rounded-xl shadow-sm border-l-4 border-blue-600">
           <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
@@ -208,7 +241,6 @@ const CommitteePresentation = ({ plans }) => {
         </div>
       </section>
 
-      {/* 2. Comissão */}
       <section>
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
           <Users className="text-slate-700" /> Comissão de Acompanhamento
@@ -216,7 +248,6 @@ const CommitteePresentation = ({ plans }) => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
-          {/* Grupo 1: Suprimentos */}
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50">
             <div className="text-xs text-slate-400 font-bold uppercase mb-3 text-center">Liderança & Suprimentos</div>
             <div className="space-y-3">
@@ -239,7 +270,6 @@ const CommitteePresentation = ({ plans }) => {
             </div>
           </div>
 
-          {/* Grupo 2: Financeiro */}
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50">
             <div className="text-xs text-slate-400 font-bold uppercase mb-3 text-center">Financeiro & Controladoria</div>
             <div className="space-y-3">
@@ -262,7 +292,6 @@ const CommitteePresentation = ({ plans }) => {
             </div>
           </div>
 
-          {/* Grupo 3: Acompanhamento */}
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50">
             <div className="text-xs text-slate-400 font-bold uppercase mb-3 text-center">Acompanhamento (PMO)</div>
             <div className="space-y-3">
@@ -318,7 +347,6 @@ const CommitteePresentation = ({ plans }) => {
         </div>
       </section>
 
-      {/* 3. Pacotes de Ações (DADOS VIVOS) */}
       <section>
         <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
@@ -356,7 +384,6 @@ const CommitteePresentation = ({ plans }) => {
         </div>
       </section>
 
-      {/* 4. Visão Temporal (DADOS VIVOS) */}
       <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
               <Clock className="text-slate-700" /> Visão Temporal
@@ -374,7 +401,7 @@ const CommitteePresentation = ({ plans }) => {
                   </div>
                   <div className="mb-4">
                       <span className="text-3xl font-bold text-emerald-700">{statsByPhase[1].total}</span>
-                      <span className="text-xs text-emerald-600 font-medium ml-1">ações no total</span>
+                      <span className="text-xs text-emerald-600 font-medium ml-1">ações</span>
                   </div>
                   
                   {/* Gráfico de Barras Fase 1 */}
@@ -389,7 +416,7 @@ const CommitteePresentation = ({ plans }) => {
                   <ul className="space-y-2 text-xs text-emerald-800 bg-white/50 p-3 rounded-lg border border-emerald-100">
                       <li className="flex items-center justify-between"><span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-600"/> Concluídos</span> <strong>{statsByPhase[1].completed}</strong></li>
                       <li className="flex items-center justify-between"><span className="flex items-center gap-2"><Loader2 size={12} className="text-emerald-500"/> Em andamento</span> <strong>{statsByPhase[1].inProgress}</strong></li>
-                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> A iniciar</span> <strong>{statsByPhase[1].notStarted}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> Não iniciado</span> <strong>{statsByPhase[1].notStarted}</strong></li>
                   </ul>
               </div>
 
@@ -404,7 +431,7 @@ const CommitteePresentation = ({ plans }) => {
                   </div>
                   <div className="mb-4">
                       <span className="text-3xl font-bold text-amber-700">{statsByPhase[2].total}</span>
-                      <span className="text-xs text-amber-600 font-medium ml-1">ações no total</span>
+                      <span className="text-xs text-amber-600 font-medium ml-1">ações</span>
                   </div>
 
                    {/* Gráfico de Barras Fase 2 */}
@@ -419,7 +446,7 @@ const CommitteePresentation = ({ plans }) => {
                   <ul className="space-y-2 text-xs text-amber-800 bg-white/50 p-3 rounded-lg border border-amber-100">
                       <li className="flex items-center justify-between"><span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-600"/> Concluídos</span> <strong>{statsByPhase[2].completed}</strong></li>
                       <li className="flex items-center justify-between"><span className="flex items-center gap-2"><Loader2 size={12} className="text-amber-500"/> Em andamento</span> <strong>{statsByPhase[2].inProgress}</strong></li>
-                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> A iniciar</span> <strong>{statsByPhase[2].notStarted}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> Não iniciado</span> <strong>{statsByPhase[2].notStarted}</strong></li>
                   </ul>
               </div>
 
@@ -434,7 +461,7 @@ const CommitteePresentation = ({ plans }) => {
                   </div>
                   <div className="mb-4">
                       <span className="text-3xl font-bold text-red-700">{statsByPhase[3].total}</span>
-                      <span className="text-xs text-red-600 font-medium ml-1">ações no total</span>
+                      <span className="text-xs text-red-600 font-medium ml-1">ações</span>
                   </div>
 
                    {/* Gráfico de Barras Fase 3 */}
@@ -449,13 +476,12 @@ const CommitteePresentation = ({ plans }) => {
                   <ul className="space-y-2 text-xs text-red-800 bg-white/50 p-3 rounded-lg border border-red-100">
                       <li className="flex items-center justify-between"><span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-600"/> Concluídos</span> <strong>{statsByPhase[3].completed}</strong></li>
                       <li className="flex items-center justify-between"><span className="flex items-center gap-2"><Loader2 size={12} className="text-red-500"/> Em andamento</span> <strong>{statsByPhase[3].inProgress}</strong></li>
-                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> A iniciar</span> <strong>{statsByPhase[3].notStarted}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> Não iniciado</span> <strong>{statsByPhase[3].notStarted}</strong></li>
                   </ul>
               </div>
           </div>
       </section>
 
-      {/* 5. Governança (DADOS VIVOS) */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="md:col-span-1 bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
               <div className="text-slate-500 text-[10px] font-bold uppercase mb-2">Economia Estimada 2026</div>
@@ -495,7 +521,6 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
     );
   };
 
-  // Cálculos de soma para a linha de resumo fixa
   const totalInvestment = plans.reduce((acc, plan) => acc + (parseFloat(plan.investment) || 0), 0);
   const totalCost2025 = plans.reduce((acc, plan) => acc + (parseFloat(plan.cost2025) || 0), 0);
   const totalSavings = plans.reduce((acc, plan) => acc + (parseFloat(plan.savings) || 0), 0);
@@ -567,10 +592,12 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
                 <td className="px-4 py-4 align-top">
                   <div className="flex flex-col items-start gap-2">
                     <div className="flex items-center gap-2">
-                      <StatusBadge status={plan.status} />
-                      {plan.requiresApproval && <ApprovalBadge />}
+                      <StatusBadge status={plan.status} onClick={(status) => onFilter('status', status)} />
+                      {plan.requiresApproval && <ApprovalBadge onClick={() => onFilter('approval', 'yes')} />}
                     </div>
-                    <span className="text-xs text-slate-500 font-medium px-1">Fase {plan.phase}</span>
+                    <div className="mt-1">
+                      <PhaseBadge phase={plan.phase} onClick={(phase) => onFilter('phase', phase)} />
+                    </div>
                   </div>
                 </td>
                 <td className="px-4 py-4 align-middle text-right">
@@ -624,7 +651,6 @@ const Dashboard = ({ plans }) => {
   const statusCount = plans.reduce((acc, p) => {
     // Normalização de status
     let st = (p.status || "Não Iniciado").trim();
-    // Capitalize first letter logic simplificada para agrupamento
     if(st.toLowerCase() === "em andamento") st = "Em Andamento";
     if(st.toLowerCase() === "concluído" || st.toLowerCase() === "concluido") st = "Concluído";
     if(st.toLowerCase() === "não iniciado") st = "Não Iniciado";
@@ -633,86 +659,73 @@ const Dashboard = ({ plans }) => {
     return acc;
   }, {});
 
+  // Ordena por maior economia, mas mantém todos os itens
   const savingsByArea = Object.entries(plans.reduce((acc, p) => {
     const val = parseFloat(p.savings);
     const safeVal = isNaN(val) ? 0 : val;
     acc[p.area] = (acc[p.area] || 0) + safeVal;
     return acc;
-  }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, {})).sort((a, b) => b[1] - a[1]);
 
   const maxSaving = Math.max(...savingsByArea.map(i => i[1]), 1);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-36">
-          <div className="flex items-start justify-between">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center h-32">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Economia Projetada</span>
-            <div className="p-2 bg-emerald-50 rounded text-emerald-600"><TrendingUp size={20} /></div>
+            <div className="p-1.5 bg-emerald-50 rounded text-emerald-600"><TrendingUp size={18} /></div>
           </div>
-          <div>
-            <MoneyDisplay value={totalSavings} size="xl" highlight />
-            <p className="text-xs text-slate-400 mt-2 font-medium">
-               ROI Estimado: <span className="text-emerald-600">{roi.toFixed(1)}%</span>
-            </p>
-          </div>
+          <MoneyDisplay value={totalSavings} size="xl" highlight />
         </div>
         
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-36">
-            <div className="flex items-start justify-between">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center h-32">
+            <div className="flex items-center justify-between mb-2">
                <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Custo Base 2025</span>
-               <div className="p-2 bg-blue-50 rounded text-blue-600"><DollarSign size={20} /></div>
+               <div className="p-1.5 bg-blue-50 rounded text-blue-600"><DollarSign size={18} /></div>
             </div>
-            <div>
-               <MoneyDisplay value={totalCost} size="xl" />
-               <p className="text-xs text-slate-400 mt-2">Impacto orçamentário total</p>
-            </div>
+            <MoneyDisplay value={totalCost} size="xl" />
         </div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-36">
-            <div className="flex items-start justify-between">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center h-32">
+            <div className="flex items-center justify-between mb-2">
                <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Investimento Nec.</span>
-               <div className="p-2 bg-amber-50 rounded text-amber-600"><Target size={20} /></div>
+               <div className="p-1.5 bg-amber-50 rounded text-amber-600"><Target size={18} /></div>
             </div>
-            <div>
-               <MoneyDisplay value={totalInvestment} size="xl" />
-               <p className="text-xs text-slate-400 mt-2">CAPEX/OPEX inicial</p>
-            </div>
+            <MoneyDisplay value={totalInvestment} size="xl" />
         </div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-36">
-            <div className="flex items-start justify-between">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center h-32">
+            <div className="flex items-center justify-between mb-2">
                <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total de Ações</span>
-               <div className="p-2 bg-purple-50 rounded text-purple-600"><List size={20} /></div>
+               <div className="p-1.5 bg-purple-50 rounded text-purple-600"><List size={18} /></div>
             </div>
-            <div>
-                <div className="font-bold text-4xl text-slate-800 tracking-tight">{plans.length}</div>
-                <p className="text-xs text-slate-400 mt-2">Iniciativas cadastradas</p>
-            </div>
+            <div className="font-bold text-3xl text-slate-800 tracking-tight text-center">{plans.length}</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-           <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
-             <BarChart3 size={18} className="text-slate-400"/> Top Economia por Área
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-h-[400px] flex flex-col">
+           <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 flex-shrink-0">
+             <BarChart3 size={18} className="text-slate-400"/> Economia por Área
            </h3>
-           <div className="space-y-5">
+           <div className="space-y-3 overflow-y-auto pr-2">
              {savingsByArea.map(([area, value]) => (
                <div key={area}>
-                 <div className="flex justify-between text-sm text-slate-600 mb-2 font-medium">
-                   <span>{area}</span>
+                 <div className="flex justify-between text-xs text-slate-600 mb-1 font-medium">
+                   <span className="truncate max-w-[200px]">{area}</span>
                    <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value)}</span>
                  </div>
-                 <div className="w-full bg-slate-50 rounded-full h-3">
-                    <div className="bg-blue-600 h-3 rounded-full" style={{ width: `${(value / maxSaving) * 100}%` }}></div>
+                 <div className="w-full bg-slate-50 rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(value / maxSaving) * 100}%` }}></div>
                  </div>
                </div>
              ))}
            </div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-h-[400px] overflow-hidden">
            <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
              <PieChart size={18} className="text-slate-400"/> Status de Implementação
            </h3>
@@ -743,6 +756,9 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [formData, setFormData] = useState(plan);
 
+  // DnD State
+  const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+
   useEffect(() => { 
     if (!isEditing) setFormData(plan); 
     if (startEditing) setIsEditing(true);
@@ -772,21 +788,38 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
   const removeStep = (id) => setFormData(prev => ({ ...prev, checklist: prev.checklist.filter(s => s.id !== id) }));
   const updateStep = (id, field, val) => setFormData(prev => ({ ...prev, checklist: prev.checklist.map(s => s.id === id ? { ...s, [field]: val } : s) }));
   
-  // Reordenação do Checklist (Drag and Drop Simples com botões)
-  const moveStep = (index, direction) => {
-    const newChecklist = [...(formData.checklist || [])];
-    if (direction === 'up' && index > 0) {
-        [newChecklist[index], newChecklist[index - 1]] = [newChecklist[index - 1], newChecklist[index]];
-    } else if (direction === 'down' && index < newChecklist.length - 1) {
-        [newChecklist[index], newChecklist[index + 1]] = [newChecklist[index + 1], newChecklist[index]];
-    }
-    setFormData(prev => ({ ...prev, checklist: newChecklist }));
-  }
+  // DRAG AND DROP HANDLERS - FIXED
+  const handleDragStart = (e, index) => {
+    setDraggedItemIndex(index);
+    // Firefox requires dataTransfer data to be set
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.parentNode);
+    e.dataTransfer.setDragImage(e.target.parentNode, 20, 20);
+  };
 
-  // Atualização direta do checklist na view (sem modo edição)
+  const handleDragOver = (index) => {
+    if (draggedItemIndex === null) return;
+    if (draggedItemIndex === index) return;
+    
+    // Create a copy
+    const newChecklist = [...formData.checklist];
+    // Remove the dragged item
+    const [draggedItem] = newChecklist.splice(draggedItemIndex, 1);
+    // Insert it at the new position
+    newChecklist.splice(index, 0, draggedItem);
+    
+    // Update state
+    setFormData(prev => ({ ...prev, checklist: newChecklist }));
+    setDraggedItemIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItemIndex(null);
+  };
+
+  // Atualização direta do checklist na view
   const toggleStepCheck = (stepId, currentStatus) => {
     const newChecklist = plan.checklist.map(s => s.id === stepId ? { ...s, checked: !currentStatus } : s);
-    // Recalcula progresso antes de salvar
     const completed = newChecklist.filter(i => i.checked).length;
     const progress = Math.round((completed / newChecklist.length) * 100);
     onSave(plan.id, { checklist: newChecklist, progress });
@@ -820,7 +853,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                </select>
              </div>
              <div className="flex flex-col">
-               <label className="text-[10px] uppercase font-bold text-blue-400 mb-1">Fase (1-3)</label>
+               <label className="text-xs uppercase font-bold text-blue-400 mb-1">Fase (1-3)</label>
                <input name="phase" type="number" min="1" max="3" value={formData.phase} onChange={handleInputChange} className="text-sm border border-blue-200 rounded px-3 py-1.5 w-24" placeholder="1" />
              </div>
            </div>
@@ -935,11 +968,18 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
               </div>
               <div className="space-y-3">
                  {(formData.checklist || []).map((step, index) => (
-                    <div key={step.id} className="flex flex-col gap-2 bg-white border border-slate-200 p-3 rounded shadow-sm group/step">
+                    <div 
+                        key={step.id} 
+                        className={`flex flex-col gap-2 bg-white border p-3 rounded shadow-sm group/step transition-all duration-200 ${draggedItemIndex === index ? 'opacity-50 border-blue-400 border-dashed scale-[0.98]' : 'border-slate-200'}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragEnter={() => handleDragOver(index)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => e.preventDefault()}
+                    >
                        <div className="flex gap-3 items-center">
-                          <div className="flex flex-col gap-0.5">
-                            <button onClick={() => moveStep(index, 'up')} disabled={index === 0} className="text-slate-300 hover:text-blue-500 disabled:opacity-30"><ChevronUp size={12} /></button>
-                            <button onClick={() => moveStep(index, 'down')} disabled={index === (formData.checklist.length - 1)} className="text-slate-300 hover:text-blue-500 disabled:opacity-30"><ChevronDown size={12} /></button>
+                          <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-blue-400">
+                             <GripVertical size={14} />
                           </div>
                           <input type="checkbox" checked={step.checked} onChange={(e) => updateStep(step.id, 'checked', e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4" />
                           <input value={step.text} onChange={(e) => updateStep(step.id, 'text', e.target.value)} className="flex-grow text-sm border-none focus:ring-0 p-0 text-slate-700" placeholder="Descreva a etapa..." />
@@ -978,9 +1018,12 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
           <Edit2 size={14} />
         </button>
       </div>
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-         {plan.requiresApproval && <ApprovalBadge />}
-         <StatusBadge status={plan.status} />
+      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+         <div className="flex items-center gap-2">
+            {plan.requiresApproval && <ApprovalBadge />}
+            <StatusBadge status={plan.status} />
+         </div>
+         <PhaseBadge phase={plan.phase} />
       </div>
       <div className="p-6 flex flex-col h-full">
         <div className="mb-4 min-h-[5rem] flex flex-col justify-start border-b border-slate-100 pb-2">
@@ -1111,9 +1154,20 @@ export default function AusterityApp() {
   const [editingPlan, setEditingPlan] = useState(null);
   const [sortConfig, setSortConfig] = useState([]);
 
+  // Inject SheetJS CDN dynamically
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    }
+  }, []);
+
   // Filtros
   const [filters, setFilters] = useState({
-    package: '', area: '', leader: '', search: '', status: '', approval: ''
+    package: '', area: '', leader: '', search: '', status: '', approval: '', phase: ''
   });
 
   useEffect(() => {
@@ -1168,12 +1222,13 @@ export default function AusterityApp() {
     return value;
   };
 
-  // EXPORTAÇÃO EXCEL ATUALIZADA
+  // EXPORTAÇÃO EXCEL ATUALIZADA (Usando window.XLSX)
   const handleExportData = () => {
-    if (typeof XLSX === 'undefined') {
-      alert("A biblioteca 'xlsx' não está ativa. No modo preview, baixando CSV simples.");
+    if (typeof window.XLSX === 'undefined') {
+      alert("A biblioteca 'xlsx' ainda está carregando ou falhou. Tente novamente em alguns segundos.");
       return; 
     }
+    const XLSX = window.XLSX; // Use global
 
     const dataToExport = [];
     (plans.length > 0 ? plans : []).forEach(p => {
@@ -1240,7 +1295,7 @@ export default function AusterityApp() {
 
   const handleCreatePlan = async () => {
     try {
-      setFilters({ package: '', area: '', leader: '', search: '', status: '', approval: '' });
+      setFilters({ package: '', area: '', leader: '', search: '', status: '', approval: '', phase: '' });
       const newPlan = {
         title: "Nova Ação de Austeridade",
         package: "Geral",
@@ -1273,15 +1328,16 @@ export default function AusterityApp() {
     finally { setLoading(false); }
   };
 
-  // IMPORTAÇÃO EXCEL ATUALIZADA
+  // IMPORTAÇÃO EXCEL ATUALIZADA (Window.XLSX)
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (typeof XLSX === 'undefined') {
-      alert("A biblioteca 'xlsx' não foi carregada. No ambiente de preview, esta função está desabilitada. Localmente, certifique-se de ter descomentado a importação.");
+    if (typeof window.XLSX === 'undefined') {
+      alert("A biblioteca 'xlsx' ainda está carregando. Tente novamente em alguns segundos.");
       return;
     }
+    const XLSX = window.XLSX;
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
@@ -1364,6 +1420,7 @@ export default function AusterityApp() {
       const matchesPackage = filters.package ? plan.package === filters.package : true;
       const matchesArea = filters.area ? plan.area === filters.area : true;
       const matchesLeader = filters.leader ? plan.leader === filters.leader : true;
+      const matchesPhase = filters.phase ? String(plan.phase) === String(filters.phase) : true;
       
       const matchesStatus = !fStatus ? true : pStatus === fStatus;
 
@@ -1375,7 +1432,7 @@ export default function AusterityApp() {
 
       const matchesSearch = (plan.title || '').toLowerCase().includes(filters.search.toLowerCase()) || 
                             (plan.description || '').toLowerCase().includes(filters.search.toLowerCase());
-      return matchesPackage && matchesArea && matchesLeader && matchesSearch && matchesStatus && matchesApproval;
+      return matchesPackage && matchesArea && matchesLeader && matchesSearch && matchesStatus && matchesApproval && matchesPhase;
     });
   }, [plans, filters]);
 
@@ -1514,7 +1571,13 @@ export default function AusterityApp() {
                 <option value="yes">Requer Aprovação</option>
                 <option value="no">Não Requer</option>
               </select>
-              <button onClick={() => setFilters({ package: '', area: '', leader: '', search: '', status: '', approval: '' })} className="px-3 py-2 text-sm text-slate-500 hover:text-slate-800 underline decoration-dotted whitespace-nowrap">Limpar Filtros</button>
+              <select className="px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500" value={filters.phase} onChange={(e) => setFilters({...filters, phase: e.target.value})}>
+                <option value="">Fase (Todas)</option>
+                <option value="1">Fase 1</option>
+                <option value="2">Fase 2</option>
+                <option value="3">Fase 3</option>
+              </select>
+              <button onClick={() => setFilters({ package: '', area: '', leader: '', search: '', status: '', approval: '', phase: '' })} className="px-3 py-2 text-sm text-slate-500 hover:text-slate-800 underline decoration-dotted whitespace-nowrap">Limpar Filtros</button>
             </div>
             
             {/* Visualização de Filtros Ativos */}
@@ -1528,7 +1591,7 @@ export default function AusterityApp() {
                     className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-100 hover:bg-blue-100 transition-colors"
                   >
                     <span className="capitalize">
-                      {key === 'leader' ? 'Líder' : key === 'area' ? 'Área' : key === 'package' ? 'Pacote' : key === 'approval' ? 'Aprovação' : 'Status'}:
+                      {key === 'leader' ? 'Líder' : key === 'area' ? 'Área' : key === 'package' ? 'Pacote' : key === 'approval' ? 'Aprovação' : key === 'phase' ? 'Fase' : 'Status'}:
                     </span> 
                     <strong>{key === 'approval' ? (value === 'yes' ? 'Sim' : 'Não') : value}</strong>
                     <X size={12} className="ml-1" />
