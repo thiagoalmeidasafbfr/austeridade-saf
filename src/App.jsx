@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Filter, Calendar, User, Briefcase, DollarSign, CheckSquare, 
   ChevronDown, ChevronUp, AlertCircle, Search, LayoutGrid, 
   List, Upload, BarChart3, PieChart, TrendingUp, Target, 
   Download, Loader2, Edit2, Save, X, Plus, Trash2, Clock, 
   Table as TableIcon, CheckCircle2, MessageSquare, AlertTriangle, Info,
-  ArrowUp, ArrowDown, ArrowUpDown, FileText, Users, Package, CalendarCheck, Presentation
+  ArrowUp, ArrowDown, ArrowUpDown, FileText, Users, Package, CalendarCheck, Presentation,
+  GripVertical
 } from 'lucide-react';
 
 // --- ATENÇÃO: Para usar Excel localmente ---
@@ -39,14 +40,20 @@ const auth = getAuth(app);
 // --- COMPONENTES AUXILIARES ---
 
 const StatusBadge = ({ status }) => {
-  const safeStatus = String(status || "Não Iniciado");
+  const safeStatus = String(status || "Não Iniciado").trim();
   const colors = {
     "Em Andamento": "bg-amber-50 text-amber-700 border-amber-200 ring-1 ring-amber-100",
     "Não Iniciado": "bg-slate-50 text-slate-600 border-slate-200 ring-1 ring-slate-100",
     "Concluído": "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-100"
   };
+  // Fallback para status com casing diferente
+  let matchedColor = colors["Não Iniciado"];
+  Object.keys(colors).forEach(key => {
+    if (key.toLowerCase() === safeStatus.toLowerCase()) matchedColor = colors[key];
+  });
+
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${colors[safeStatus] || colors["Não Iniciado"]}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${matchedColor}`}>
       {safeStatus}
     </span>
   );
@@ -88,7 +95,30 @@ const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
   );
 };
 
-// --- NOVA VISÃO: APRESENTAÇÃO DO COMITÊ (COM DADOS REAIS) ---
+// --- GRÁFICO DE BARRAS SIMPLES ---
+const SimpleBarChart = ({ data }) => {
+  const total = data.reduce((acc, item) => acc + item.value, 0);
+  if (total === 0) return <div className="text-[10px] text-slate-400 italic text-center">Sem dados</div>;
+
+  return (
+    <div className="flex h-4 w-full rounded-full overflow-hidden">
+      {data.map((item, index) => {
+        if (item.value === 0) return null;
+        const width = (item.value / total) * 100;
+        return (
+          <div 
+            key={index} 
+            style={{ width: `${width}%` }} 
+            className={`${item.color} h-full first:rounded-l-full last:rounded-r-full`}
+            title={`${item.label}: ${item.value}`}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+// --- NOVA VISÃO: APRESENTAÇÃO DO COMITÊ (ATUALIZADA) ---
 const CommitteePresentation = ({ plans }) => {
   // --- Cálculos de Agregação ---
   
@@ -102,19 +132,31 @@ const CommitteePresentation = ({ plans }) => {
     return Object.entries(grouped).sort((a, b) => b[1] - a[1]);
   }, [plans]);
 
-  // 2. Por Fase (Contagem e Status)
+  // 2. Por Fase (Contagem e Status DETALHADO)
   const statsByPhase = useMemo(() => {
-    const stats = { 1: { total: 0, inProgress: 0, pending: 0 }, 2: { total: 0, inProgress: 0, pending: 0 }, 3: { total: 0, inProgress: 0, pending: 0 } };
+    // Inicializa estrutura
+    const stats = { 
+      1: { total: 0, completed: 0, inProgress: 0, notStarted: 0 }, 
+      2: { total: 0, completed: 0, inProgress: 0, notStarted: 0 }, 
+      3: { total: 0, completed: 0, inProgress: 0, notStarted: 0 } 
+    };
     
     plans.forEach(plan => {
-      const phase = plan.phase && [1, 2, 3].includes(parseInt(plan.phase)) ? parseInt(plan.phase) : 3; // Default to 3 if invalid
-      if(stats[phase]) {
-        stats[phase].total += 1;
-        if(plan.status === 'Em Andamento' || plan.status === 'Concluído') {
-          stats[phase].inProgress += 1;
-        } else {
-          stats[phase].pending += 1;
-        }
+      // Normaliza fase
+      let phase = parseInt(plan.phase);
+      if (![1, 2, 3].includes(phase)) phase = 3; // Default
+
+      // Normaliza Status
+      const status = (plan.status || "").toLowerCase().trim();
+
+      stats[phase].total += 1;
+      
+      if (status === 'concluído' || status === 'concluido') {
+        stats[phase].completed += 1;
+      } else if (status === 'em andamento') {
+        stats[phase].inProgress += 1;
+      } else {
+        stats[phase].notStarted += 1;
       }
     });
     return stats;
@@ -135,7 +177,7 @@ const CommitteePresentation = ({ plans }) => {
             <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
               <FileText size={24} />
             </div>
-            <h2 className="font-bold text-2xl text-slate-800">O Plano</h2>
+            <h2 className="font-bold text-2xl text-slate-800">O Plano: Estrada dos Louros</h2>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -246,7 +288,7 @@ const CommitteePresentation = ({ plans }) => {
         </div>
 
         <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-600 pl-2 border-l-4 border-slate-300">
-           Representantes de Áreas Chave
+            Representantes de Áreas Chave
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
@@ -319,11 +361,12 @@ const CommitteePresentation = ({ plans }) => {
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-800">
               <Clock className="text-slate-700" /> Visão Temporal
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 rounded-lg overflow-hidden border border-slate-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 rounded-lg overflow-hidden border border-slate-200 divide-y md:divide-y-0 md:divide-x divide-slate-200">
               
-              <div className="bg-emerald-50 p-6 border-b md:border-b-0 md:border-r border-emerald-100">
+              {/* Fase 1 */}
+              <div className="bg-emerald-50/50 p-6">
                   <div className="flex items-center gap-3 mb-4">
-                      <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                      <span className="bg-emerald-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">1</span>
                       <div>
                           <h3 className="font-bold text-emerald-900">Fase 1</h3>
                           <p className="text-[10px] text-emerald-600 font-medium uppercase tracking-wide">Jan - Abr 2026</p>
@@ -333,15 +376,27 @@ const CommitteePresentation = ({ plans }) => {
                       <span className="text-3xl font-bold text-emerald-700">{statsByPhase[1].total}</span>
                       <span className="text-xs text-emerald-600 font-medium ml-1">ações no total</span>
                   </div>
+                  
+                  {/* Gráfico de Barras Fase 1 */}
+                  <div className="mb-4">
+                    <SimpleBarChart data={[
+                        { label: 'Concluído', value: statsByPhase[1].completed, color: 'bg-emerald-500' },
+                        { label: 'Em Andamento', value: statsByPhase[1].inProgress, color: 'bg-emerald-300' },
+                        { label: 'Não Iniciado', value: statsByPhase[1].notStarted, color: 'bg-slate-200' }
+                    ]} />
+                  </div>
+
                   <ul className="space-y-2 text-xs text-emerald-800 bg-white/50 p-3 rounded-lg border border-emerald-100">
-                      <li className="flex items-center gap-2"><Loader2 size={12} className="text-emerald-500 animate-spin"/> <strong>{statsByPhase[1].inProgress}</strong> em andamento/conc.</li>
-                      <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-500"/> <strong>{statsByPhase[1].pending}</strong> a iniciar</li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-600"/> Concluídos</span> <strong>{statsByPhase[1].completed}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><Loader2 size={12} className="text-emerald-500"/> Em andamento</span> <strong>{statsByPhase[1].inProgress}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> A iniciar</span> <strong>{statsByPhase[1].notStarted}</strong></li>
                   </ul>
               </div>
 
-              <div className="bg-amber-50 p-6 border-b md:border-b-0 md:border-r border-amber-100">
+              {/* Fase 2 */}
+              <div className="bg-amber-50/50 p-6">
                   <div className="flex items-center gap-3 mb-4">
-                      <span className="bg-amber-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                      <span className="bg-amber-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">2</span>
                       <div>
                           <h3 className="font-bold text-amber-900">Fase 2</h3>
                           <p className="text-[10px] text-amber-600 font-medium uppercase tracking-wide">Mai - Ago 2026</p>
@@ -349,17 +404,29 @@ const CommitteePresentation = ({ plans }) => {
                   </div>
                   <div className="mb-4">
                       <span className="text-3xl font-bold text-amber-700">{statsByPhase[2].total}</span>
-                      <span className="text-xs text-amber-600 font-medium ml-1">ações</span>
+                      <span className="text-xs text-amber-600 font-medium ml-1">ações no total</span>
                   </div>
+
+                   {/* Gráfico de Barras Fase 2 */}
+                   <div className="mb-4">
+                    <SimpleBarChart data={[
+                        { label: 'Concluído', value: statsByPhase[2].completed, color: 'bg-emerald-500' },
+                        { label: 'Em Andamento', value: statsByPhase[2].inProgress, color: 'bg-amber-400' },
+                        { label: 'Não Iniciado', value: statsByPhase[2].notStarted, color: 'bg-slate-200' }
+                    ]} />
+                  </div>
+
                   <ul className="space-y-2 text-xs text-amber-800 bg-white/50 p-3 rounded-lg border border-amber-100">
-                      <li className="flex items-center gap-2"><Loader2 size={12} className="text-amber-500"/> <strong>{statsByPhase[2].inProgress}</strong> em andamento</li>
-                      <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-amber-500"/> <strong>{statsByPhase[2].pending}</strong> a iniciar</li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-600"/> Concluídos</span> <strong>{statsByPhase[2].completed}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><Loader2 size={12} className="text-amber-500"/> Em andamento</span> <strong>{statsByPhase[2].inProgress}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> A iniciar</span> <strong>{statsByPhase[2].notStarted}</strong></li>
                   </ul>
               </div>
 
-              <div className="bg-red-50 p-6">
+              {/* Fase 3 */}
+              <div className="bg-red-50/50 p-6">
                   <div className="flex items-center gap-3 mb-4">
-                      <span className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                      <span className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">3</span>
                       <div>
                           <h3 className="font-bold text-red-900">Fase 3</h3>
                           <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">Set - Dez 2026</p>
@@ -367,11 +434,22 @@ const CommitteePresentation = ({ plans }) => {
                   </div>
                   <div className="mb-4">
                       <span className="text-3xl font-bold text-red-700">{statsByPhase[3].total}</span>
-                      <span className="text-xs text-red-600 font-medium ml-1">ações</span>
+                      <span className="text-xs text-red-600 font-medium ml-1">ações no total</span>
                   </div>
+
+                   {/* Gráfico de Barras Fase 3 */}
+                   <div className="mb-4">
+                    <SimpleBarChart data={[
+                        { label: 'Concluído', value: statsByPhase[3].completed, color: 'bg-emerald-500' },
+                        { label: 'Em Andamento', value: statsByPhase[3].inProgress, color: 'bg-red-400' },
+                        { label: 'Não Iniciado', value: statsByPhase[3].notStarted, color: 'bg-slate-200' }
+                    ]} />
+                  </div>
+
                   <ul className="space-y-2 text-xs text-red-800 bg-white/50 p-3 rounded-lg border border-red-100">
-                      <li className="flex items-center gap-2"><Loader2 size={12} className="text-red-500"/> <strong>{statsByPhase[3].inProgress}</strong> em andamento</li>
-                      <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-red-500"/> <strong>{statsByPhase[3].pending}</strong> a iniciar</li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><CheckCircle2 size={12} className="text-emerald-600"/> Concluídos</span> <strong>{statsByPhase[3].completed}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><Loader2 size={12} className="text-red-500"/> Em andamento</span> <strong>{statsByPhase[3].inProgress}</strong></li>
+                      <li className="flex items-center justify-between"><span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> A iniciar</span> <strong>{statsByPhase[3].notStarted}</strong></li>
                   </ul>
               </div>
           </div>
@@ -398,7 +476,7 @@ const CommitteePresentation = ({ plans }) => {
       </section>
 
       <footer className="text-center text-slate-400 text-[10px] py-8">
-          <p>Plano de Ação de Austeridade Financeira © 2026</p>
+          <p>Estrada dos Louros - Plano de Ação de Austeridade Financeira © 2026</p>
       </footer>
     </div>
   );
@@ -407,8 +485,6 @@ const CommitteePresentation = ({ plans }) => {
 // --- VISÃO EM TABELA ---
 const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) => {
   const getSortIcon = (key) => {
-    // Agora apenas verifica se a chave atual é igual à chave clicada para mostrar o ícone
-    // Suportando apenas ordenação simples (um critério por vez)
     const currentSort = sortConfig[0];
     if (!currentSort || currentSort.key !== key) return <ArrowUpDown size={12} className="opacity-30" />;
     
@@ -418,6 +494,11 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
       </div>
     );
   };
+
+  // Cálculos de soma para a linha de resumo fixa
+  const totalInvestment = plans.reduce((acc, plan) => acc + (parseFloat(plan.investment) || 0), 0);
+  const totalCost2025 = plans.reduce((acc, plan) => acc + (parseFloat(plan.cost2025) || 0), 0);
+  const totalSavings = plans.reduce((acc, plan) => acc + (parseFloat(plan.savings) || 0), 0);
 
   const SortableHeader = ({ label, sortKey, align = "left", width }) => (
     <th 
@@ -432,10 +513,10 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 w-full overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1300px] divide-y divide-slate-200">
-          <thead className="bg-slate-50/80">
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 w-full overflow-hidden flex flex-col max-h-[80vh]">
+      <div className="overflow-auto flex-grow">
+        <table className="w-full min-w-[1300px] divide-y divide-slate-200 border-separate border-spacing-0">
+          <thead className="bg-slate-50/95 sticky top-0 z-10 shadow-sm backdrop-blur">
             <tr>
               <SortableHeader label="Ação" sortKey="title" width="w-[20%]" />
               <SortableHeader label="Pacote" sortKey="package" width="w-[12%]" />
@@ -445,14 +526,32 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort }) =>
               <SortableHeader label="Custo 2025" sortKey="cost2025" align="right" width="w-[10%]" />
               <SortableHeader label="Economia Esperada" sortKey="savings" align="right" width="w-[12%]" />
               <SortableHeader label="Progresso" sortKey="progress" align="center" width="w-[6%]" />
-              <th className="px-4 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider w-[4%]"></th>
+              <th className="px-4 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider w-[4%] bg-slate-50"></th>
+            </tr>
+            {/* LINHA DE SOMA STICKY LOGO ABAIXO DO HEADER */}
+            <tr className="bg-blue-50/80 font-bold text-slate-700 shadow-sm">
+                <td className="px-4 py-2 text-xs uppercase text-slate-500 text-right" colSpan={4}>Totais da Seleção:</td>
+                <td className="px-4 py-2 text-right"><MoneyDisplay value={totalInvestment} size="sm" /></td>
+                <td className="px-4 py-2 text-right"><MoneyDisplay value={totalCost2025} size="sm" /></td>
+                <td className="px-4 py-2 text-right text-emerald-700"><MoneyDisplay value={totalSavings} size="sm" highlight /></td>
+                <td className="px-4 py-2" colSpan={2}></td>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-100">
             {plans.map((plan) => (
               <tr key={plan.id} className="hover:bg-slate-50 transition-colors group">
                 <td className="px-4 py-4 align-top">
-                  <span className="text-sm font-semibold text-slate-800 leading-snug block">{plan.title}</span>
+                  <div className="flex items-start gap-2">
+                    <span className="text-sm font-semibold text-slate-800 leading-snug block">{plan.title}</span>
+                    {plan.description && (
+                        <div className="group/tooltip relative">
+                            <Info size={14} className="text-slate-300 hover:text-blue-500 cursor-help mt-0.5" />
+                            <div className="absolute left-full top-0 ml-2 w-64 p-3 bg-slate-800 text-white text-xs rounded shadow-xl opacity-0 group-hover/tooltip:opacity-100 pointer-events-none z-50 transition-opacity">
+                                {plan.description}
+                            </div>
+                        </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-4 align-top">
                   <button onClick={(e) => { e.stopPropagation(); onFilter('package', plan.package); }} className="text-xs font-bold text-blue-600 uppercase tracking-wide text-left hover:underline w-fit">
@@ -523,7 +622,14 @@ const Dashboard = ({ plans }) => {
   const roi = totalInvestment > 0 ? ((totalSavings - totalInvestment) / totalInvestment) * 100 : 0;
   
   const statusCount = plans.reduce((acc, p) => {
-    acc[p.status] = (acc[p.status] || 0) + 1;
+    // Normalização de status
+    let st = (p.status || "Não Iniciado").trim();
+    // Capitalize first letter logic simplificada para agrupamento
+    if(st.toLowerCase() === "em andamento") st = "Em Andamento";
+    if(st.toLowerCase() === "concluído" || st.toLowerCase() === "concluido") st = "Concluído";
+    if(st.toLowerCase() === "não iniciado") st = "Não Iniciado";
+
+    acc[st] = (acc[st] || 0) + 1;
     return acc;
   }, {});
 
@@ -576,7 +682,7 @@ const Dashboard = ({ plans }) => {
 
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between h-36">
             <div className="flex items-start justify-between">
-               <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total de Planos</span>
+               <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total de Ações</span>
                <div className="p-2 bg-purple-50 rounded text-purple-600"><List size={20} /></div>
             </div>
             <div>
@@ -620,7 +726,7 @@ const Dashboard = ({ plans }) => {
                    <div className={`w-3 h-3 rounded-full ${item.color} mr-3`} />
                    <span className={`text-sm font-medium ${item.text} flex-grow`}>{item.label}</span>
                    <span className="text-base font-bold text-slate-900">{item.count}</span>
-                   <span className="text-xs text-slate-400 ml-1 uppercase font-semibold">planos</span>
+                   <span className="text-xs text-slate-400 ml-1 uppercase font-semibold">ações</span>
                 </div>
               ))}
            </div>
@@ -642,6 +748,18 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     if (startEditing) setIsEditing(true);
   }, [plan, startEditing]);
 
+  // Recalcula progresso automaticamente se houver checklist
+  useEffect(() => {
+    if (formData.checklist && formData.checklist.length > 0) {
+        const completed = formData.checklist.filter(i => i.checked).length;
+        const total = formData.checklist.length;
+        const calcProgress = Math.round((completed / total) * 100);
+        if (calcProgress !== formData.progress) {
+            setFormData(prev => ({ ...prev, progress: calcProgress }));
+        }
+    }
+  }, [formData.checklist]);
+
   const handleSave = () => { onSave(plan.id, formData); setIsEditing(false); if(onCloseEdit) onCloseEdit(); };
   const handleCancel = () => { setFormData(plan); setIsEditing(false); if(onCloseEdit) onCloseEdit(); };
   const handleInputChange = (e) => { 
@@ -654,10 +772,24 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
   const removeStep = (id) => setFormData(prev => ({ ...prev, checklist: prev.checklist.filter(s => s.id !== id) }));
   const updateStep = (id, field, val) => setFormData(prev => ({ ...prev, checklist: prev.checklist.map(s => s.id === id ? { ...s, [field]: val } : s) }));
   
-  // Atualização direta do checklist na view
+  // Reordenação do Checklist (Drag and Drop Simples com botões)
+  const moveStep = (index, direction) => {
+    const newChecklist = [...(formData.checklist || [])];
+    if (direction === 'up' && index > 0) {
+        [newChecklist[index], newChecklist[index - 1]] = [newChecklist[index - 1], newChecklist[index]];
+    } else if (direction === 'down' && index < newChecklist.length - 1) {
+        [newChecklist[index], newChecklist[index + 1]] = [newChecklist[index + 1], newChecklist[index]];
+    }
+    setFormData(prev => ({ ...prev, checklist: newChecklist }));
+  }
+
+  // Atualização direta do checklist na view (sem modo edição)
   const toggleStepCheck = (stepId, currentStatus) => {
     const newChecklist = plan.checklist.map(s => s.id === stepId ? { ...s, checked: !currentStatus } : s);
-    onSave(plan.id, { checklist: newChecklist });
+    // Recalcula progresso antes de salvar
+    const completed = newChecklist.filter(i => i.checked).length;
+    const progress = Math.round((completed / newChecklist.length) * 100);
+    onSave(plan.id, { checklist: newChecklist, progress });
   };
 
   const updateStepDate = (stepId, field, newDate) => {
@@ -665,25 +797,9 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     onSave(plan.id, { checklist: newChecklist });
   }
 
-  const formatExcelDate = (value) => {
-    if (!value) return "";
-    if (typeof value === 'number' && value > 20000) {
-       const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-       date.setSeconds(date.getSeconds() + 10); 
-       return date.toLocaleDateString('pt-BR'); 
-    }
-    return value;
-  };
-
   const progress = parseInt(formData.progress) || 0;
   const progressColor = progress === 100 ? 'bg-emerald-500' : progress > 0 ? 'bg-blue-600' : 'bg-slate-300';
-  const currentNoteColor = formData.noteColor || "amber";
-  const noteColors = {
-    red: "bg-red-50 text-red-800 border-red-200",
-    amber: "bg-amber-50 text-amber-800 border-amber-200",
-    green: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    blue: "bg-blue-50 text-blue-800 border-blue-200"
-  };
+  const hasNotes = Boolean(plan.notes && plan.notes.trim().length > 0);
 
   if (isEditing) {
     return (
@@ -725,19 +841,21 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
            </div>
 
            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col">
-                <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Líder</label>
-                <input name="leader" value={formData.leader} onChange={handleInputChange} className="text-sm border border-slate-300 rounded p-2" />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Área</label>
-                <input name="area" value={formData.area} onChange={handleInputChange} className="text-sm border border-slate-300 rounded p-2" />
-              </div>
+             <div className="flex flex-col">
+               <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Líder</label>
+               <input name="leader" value={formData.leader} onChange={handleInputChange} className="text-sm border border-slate-300 rounded p-2" />
+             </div>
+             <div className="flex flex-col">
+               <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Área</label>
+               <input name="area" value={formData.area} onChange={handleInputChange} className="text-sm border border-slate-300 rounded p-2" />
+             </div>
            </div>
+           
            <div className="flex flex-col">
              <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Descrição</label>
              <textarea name="description" value={formData.description} onChange={handleInputChange} className="w-full text-sm border border-slate-300 rounded p-2 min-h-[80px]" />
            </div>
+
            <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
               <div className="grid grid-cols-3 gap-4">
                  <div className="col-span-1">
@@ -755,24 +873,26 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
               </div>
               <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-4">
                   <div>
-                     <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block">Investimento Nec.</label>
-                     <input name="investment" value={formData.investment} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2 bg-slate-50" />
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block">Investimento Nec.</label>
+                      <input name="investment" value={formData.investment} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2 bg-slate-50" />
                   </div>
                   <div>
-                     <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block">Custo 2025</label>
-                     <input name="cost2025" value={formData.cost2025} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2 bg-slate-50" />
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block">Custo 2025</label>
+                      <input name="cost2025" value={formData.cost2025} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2 bg-slate-50" />
                   </div>
                   <div>
-                     <label className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1 block">Economia Estimada</label>
-                     <input name="savings" value={formData.savings} onChange={handleInputChange} className="w-full text-sm font-bold text-emerald-700 border border-emerald-200 bg-emerald-50 rounded p-2" />
+                      <label className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1 block">Economia Estimada</label>
+                      <input name="savings" value={formData.savings} onChange={handleInputChange} className="w-full text-sm font-bold text-emerald-700 border border-emerald-200 bg-emerald-50 rounded p-2" />
                   </div>
               </div>
            </div>
 
-           {/* Progresso Manual com Slider e Input */}
+           {/* Progresso Manual com Slider (Desabilitado se houver checklist) */}
            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div className="flex justify-between items-center mb-2">
-                 <label className="text-[10px] uppercase font-bold text-slate-500">Progresso Estimado</label>
+                 <label className="text-[10px] uppercase font-bold text-slate-500">
+                    Progresso {formData.checklist?.length > 0 ? "(Automático via Checklist)" : "(Manual)"}
+                 </label>
                  <div className="flex items-center bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
                     <input 
                       type="number" 
@@ -781,7 +901,8 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                       name="progress"
                       value={progress} 
                       onChange={handleInputChange} 
-                      className="w-10 text-right text-xs font-bold text-blue-600 outline-none border-none p-0"
+                      disabled={formData.checklist?.length > 0}
+                      className="w-10 text-right text-xs font-bold text-blue-600 outline-none border-none p-0 disabled:text-slate-400"
                     />
                     <span className="text-[10px] font-bold text-slate-400 ml-1">%</span>
                  </div>
@@ -795,9 +916,16 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                    value={progress} 
                    name="progress" 
                    onChange={handleInputChange} 
-                   className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                   disabled={formData.checklist?.length > 0}
+                   className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:accent-slate-400"
                  />
               </div>
+           </div>
+
+           {/* Notas */}
+           <div className="flex flex-col">
+             <label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Notas / Observações</label>
+             <textarea name="notes" value={formData.notes || ""} onChange={handleInputChange} className="w-full text-sm border border-slate-300 rounded p-2 min-h-[60px]" placeholder="Observações internas..." />
            </div>
 
            <div className="border-t border-slate-200 pt-5">
@@ -806,9 +934,13 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                  <button onClick={addStep} className="text-blue-600 text-xs font-bold uppercase flex items-center hover:bg-blue-50 px-3 py-1.5 rounded transition-colors"><Plus size={12} className="mr-1"/> Adicionar</button>
               </div>
               <div className="space-y-3">
-                 {(formData.checklist || []).map((step) => (
-                    <div key={step.id} className="flex flex-col gap-2 bg-white border border-slate-200 p-3 rounded shadow-sm">
+                 {(formData.checklist || []).map((step, index) => (
+                    <div key={step.id} className="flex flex-col gap-2 bg-white border border-slate-200 p-3 rounded shadow-sm group/step">
                        <div className="flex gap-3 items-center">
+                          <div className="flex flex-col gap-0.5">
+                            <button onClick={() => moveStep(index, 'up')} disabled={index === 0} className="text-slate-300 hover:text-blue-500 disabled:opacity-30"><ChevronUp size={12} /></button>
+                            <button onClick={() => moveStep(index, 'down')} disabled={index === (formData.checklist.length - 1)} className="text-slate-300 hover:text-blue-500 disabled:opacity-30"><ChevronDown size={12} /></button>
+                          </div>
                           <input type="checkbox" checked={step.checked} onChange={(e) => updateStep(step.id, 'checked', e.target.checked)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4" />
                           <input value={step.text} onChange={(e) => updateStep(step.id, 'text', e.target.value)} className="flex-grow text-sm border-none focus:ring-0 p-0 text-slate-700" placeholder="Descreva a etapa..." />
                           <button onClick={() => removeStep(step.id)} className="text-slate-300 hover:text-red-500 transition-colors ml-2"><Trash2 size={16}/></button>
@@ -840,7 +972,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col group relative overflow-hidden ${isDescriptionExpanded ? 'row-span-2' : ''}`}>
+    <div className={`bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex flex-col group relative overflow-visible ${isDescriptionExpanded ? 'row-span-2' : ''}`}>
       <div className="absolute top-3 left-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button onClick={() => setIsEditing(true)} className="p-2 bg-white text-slate-400 hover:text-blue-600 border border-slate-200 rounded-lg shadow-sm hover:shadow">
           <Edit2 size={14} />
@@ -880,7 +1012,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
         </div>
         <div className={`mb-4 relative ${isDescriptionExpanded ? '' : 'max-h-[4rem] overflow-hidden'}`}>
           <p className="text-sm text-slate-600 leading-relaxed">
-            {plan.description || "Sem descrição definida para este plano de ação."}
+            {plan.description || "Sem descrição definida para esta ação."}
           </p>
           {!isDescriptionExpanded && (
              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent"></div>
@@ -893,7 +1025,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
           {isDescriptionExpanded ? "Recolher Descrição" : "Ver Mais Descrição"} {isDescriptionExpanded ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
         </button>
         
-        <div className="mt-auto pt-4">
+        <div className="mt-auto pt-4 relative">
           <div className="flex justify-between items-end mb-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progresso Global</span>
             <span className="text-xs font-bold text-slate-700">{progress}%</span>
@@ -911,18 +1043,20 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                   {showChecklist ? "Ocultar Etapas" : `Mostrar ${plan.checklist.length} Etapas`}
                 </button>
              ) : <div className="text-[10px] text-slate-300 italic">Sem checklist</div>}
-             {plan.notes ? (
-               <div className="relative group/note">
-                  <div className={`cursor-help flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase transition-transform hover:scale-105 shadow-sm ${noteColors[currentNoteColor] || noteColors.amber}`}>
+             
+             {/* Note Icon Tooltip */}
+             {hasNotes && (
+               <div className="relative group/note z-50">
+                  <div className={`cursor-help flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase transition-transform hover:scale-105 shadow-sm bg-amber-50 text-amber-800 border-amber-200`}>
                     <MessageSquare size={12} strokeWidth={2.5} />
                     <span>Nota</span>
                   </div>
-                  <div className="absolute bottom-full right-0 mb-2 w-64 p-4 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl opacity-0 group-hover/note:opacity-100 transition-all duration-200 pointer-events-none z-50 translate-y-2 group-hover/note:translate-y-0">
+                  <div className="absolute bottom-full right-0 mb-2 w-64 p-4 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl opacity-0 group-hover/note:opacity-100 transition-all duration-200 pointer-events-none translate-y-2 group-hover/note:translate-y-0 z-50">
                     <p className="leading-relaxed font-light">{plan.notes}</p>
                     <div className="absolute top-full right-4 -mt-1 border-4 border-transparent border-t-slate-900/95"></div>
                   </div>
                </div>
-             ) : null}
+             )}
           </div>
           
           {showChecklist && (
@@ -1099,7 +1233,7 @@ export default function AusterityApp() {
   };
 
   const handleDeletePlan = async (id) => {
-      if (confirm("Tem certeza que deseja excluir este plano?")) {
+      if (confirm("Tem certeza que deseja excluir esta ação?")) {
           await deleteDoc(doc(db, 'plans', id));
       }
   };
@@ -1122,7 +1256,7 @@ export default function AusterityApp() {
       if(currentView === 'dashboard') setCurrentView('list');
     } catch (e) {
       console.error(e);
-      alert("Erro ao criar plano: " + e.message);
+      alert("Erro ao criar ação: " + e.message);
     }
   };
 
@@ -1207,7 +1341,7 @@ export default function AusterityApp() {
         });
 
         await batch.commit();
-        alert(`${count} planos importados com sucesso!`);
+        alert(`${count} ações importadas com sucesso!`);
       } catch (err) {
         console.error(err);
         alert("Erro ao processar Excel.");
@@ -1221,13 +1355,18 @@ export default function AusterityApp() {
   const uniqueAreas = useMemo(() => [...new Set(plans.map(p => p.area).filter(Boolean))], [plans]);
   const uniqueLeaders = useMemo(() => [...new Set(plans.map(p => p.leader).filter(Boolean))], [plans]);
 
-  // Filtering Logic
+  // Filtering Logic (Corrigida para evitar erros de espaço/case)
   const filteredPlans = useMemo(() => {
     return plans.filter(plan => {
+      const pStatus = (plan.status || "").toLowerCase().trim();
+      const fStatus = filters.status.toLowerCase().trim();
+      
       const matchesPackage = filters.package ? plan.package === filters.package : true;
       const matchesArea = filters.area ? plan.area === filters.area : true;
       const matchesLeader = filters.leader ? plan.leader === filters.leader : true;
-      const matchesStatus = filters.status ? plan.status === filters.status : true;
+      
+      const matchesStatus = !fStatus ? true : pStatus === fStatus;
+
       const matchesApproval = filters.approval === '' 
           ? true 
           : filters.approval === 'yes' 
@@ -1240,7 +1379,7 @@ export default function AusterityApp() {
     });
   }, [plans, filters]);
 
-  // Sorting Logic (Single Column)
+  // Sorting Logic
   const sortedPlans = useMemo(() => {
     if (sortConfig.length === 0) return filteredPlans;
 
@@ -1315,6 +1454,10 @@ export default function AusterityApp() {
             </div>
 
             <div className="flex items-center gap-4 text-sm">
+               <div className="hidden lg:block font-serif italic font-bold text-slate-500 text-lg border-b-2 border-slate-200 px-2 pb-0.5 mr-4">
+                  Estrada dos Louros
+               </div>
+
                <div className="hidden md:flex items-center gap-2">
                  
                  <input type="file" id="excel-input" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
@@ -1346,7 +1489,7 @@ export default function AusterityApp() {
             <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-grow md:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input type="text" placeholder="Buscar plano..." className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" value={filters.search} onChange={(e) => setFilters({...filters, search: e.target.value})} />
+                <input type="text" placeholder="Buscar ação..." className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" value={filters.search} onChange={(e) => setFilters({...filters, search: e.target.value})} />
               </div>
               <select className="px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500" value={filters.package} onChange={(e) => setFilters({...filters, package: e.target.value})}>
                 <option value="">Todos Pacotes</option>
@@ -1361,7 +1504,7 @@ export default function AusterityApp() {
                 {uniqueLeaders.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
                <select className="px-3 py-2 bg-white border border-slate-300 rounded-md text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500" value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})}>
-                <option value="">Status</option>
+                <option value="">Status (Todos)</option>
                 <option value="Em Andamento">Em Andamento</option>
                 <option value="Não Iniciado">Não Iniciado</option>
                 <option value="Concluído">Concluído</option>
@@ -1449,7 +1592,7 @@ export default function AusterityApp() {
                 {sortedPlans.length === 0 && (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
                     <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3"><Search size={24} /></div>
-                    <h3 className="text-lg font-medium text-slate-900">Nenhum plano encontrado</h3>
+                    <h3 className="text-lg font-medium text-slate-900">Nenhuma ação encontrada</h3>
                     <p className="text-slate-500 mb-4">Seu banco de dados parece vazio ou o filtro não retornou resultados.</p>
                     <button onClick={() => document.getElementById('excel-input').click()} className="text-blue-600 font-medium hover:underline">Importar Excel</button>
                   </div>
