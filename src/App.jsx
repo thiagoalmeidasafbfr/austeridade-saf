@@ -6,7 +6,7 @@ import {
   Download, Loader2, Edit2, Save, X, Plus, Trash2, Clock, 
   Table as TableIcon, CheckCircle2, MessageSquare, AlertTriangle, Info,
   ArrowUp, ArrowDown, ArrowUpDown, FileText, Users, Package, CalendarCheck, Presentation,
-  GripVertical, Lock, LogOut
+  GripVertical, Lock, LogOut, EyeOff
 } from 'lucide-react';
 
 // --- FIREBASE IMPORTS ---
@@ -33,6 +33,56 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // --- COMPONENTES AUXILIARES ---
+
+const formatMonthYear = (dateStr) => {
+  if (!dateStr) return "N/D";
+  try {
+    let year, month;
+
+    // Verifica formato DD/MM/YYYY (comum no Excel/BR)
+    if (dateStr.includes('/') && dateStr.split('/').length === 3) {
+       const parts = dateStr.split('/');
+       // Assumindo DD/MM/YYYY
+       month = parts[1];
+       year = parts[2];
+    } 
+    // Verifica formato ISO YYYY-MM-DD ou YYYY-MM
+    else if (dateStr.includes('-')) {
+       [year, month] = dateStr.split('-');
+    } else {
+       return dateStr;
+    }
+
+    if (!year || !month) return dateStr;
+    
+    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const monthIndex = parseInt(month) - 1;
+    
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${months[monthIndex]}/${year}`;
+    }
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+// Helper para converter data armazenada para o value do input type="month" (YYYY-MM)
+const getMonthInputValue = (dateStr) => {
+  if (!dateStr) return "";
+  // Se já for YYYY-MM ou YYYY-MM-DD (ISO)
+  if (dateStr.includes('-')) {
+    return dateStr.substring(0, 7);
+  }
+  // Se for DD/MM/YYYY
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/'); // [DD, MM, YYYY]
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}`;
+    }
+  }
+  return "";
+};
 
 const StatusBadge = ({ status, onClick }) => {
   const safeStatus = String(status || "Não Iniciado").trim();
@@ -98,7 +148,7 @@ const ApprovalBadge = ({ onClick }) => (
   </span>
 );
 
-const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
+const MoneyDisplay = ({ label, value, highlight = false, size = "sm", ignored = false }) => {
   let displayValue = value;
   let isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
   
@@ -117,10 +167,11 @@ const MoneyDisplay = ({ label, value, highlight = false, size = "sm" }) => {
   };
   
   return (
-    <div className="flex flex-col h-full justify-center">
+    <div className={`flex flex-col h-full justify-center ${ignored ? 'opacity-50' : ''}`} title={ignored ? "Valor não somado nos totais" : ""}>
       {label && <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 leading-none text-center">{label}</span>}
-      <span className={`font-bold tracking-tight text-center ${sizeClasses[size] || 'text-sm'} ${highlight ? 'text-emerald-700' : 'text-slate-800'}`}>
+      <span className={`font-bold tracking-tight text-center flex items-center justify-center gap-1 ${sizeClasses[size] || 'text-sm'} ${highlight ? 'text-emerald-700' : 'text-slate-800'}`}>
         {displayValue}
+        {ignored && <EyeOff size={12} className="text-slate-400" />}
       </span>
     </div>
   );
@@ -156,7 +207,7 @@ const LoginScreen = ({ onLogin }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (user === 'adminsafbotafogo2026' && pass === 'adminsafbotafogo2026') {
+    if (user === 'admin' && pass === 'admin') {
       onLogin('admin');
     } else if (user === 'user' && pass === 'user') {
       onLogin('user');
@@ -384,29 +435,37 @@ const CommitteePresentation = ({ plans }) => {
         <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-600 pl-2 border-l-4 border-slate-300">
             Representantes de Áreas Chave
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-              <img src="https://ui-avatars.com/api/?name=Leonardo+Coelho&background=94a3b8&color=fff&size=128" alt="Leonardo" className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+           <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+              <img src="https://ui-avatars.com/api/?name=Leonardo+Coelho&background=94a3b8&color=fff&size=128" alt="Leonardo" className="w-10 h-10 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">Futebol</p>
-                <h3 className="font-bold text-slate-800 text-sm">Leonardo Coelho</h3>
-                <p className="text-[10px] text-slate-500">Dir. Coord. Futebol</p>
+                <p className="text-[9px] text-slate-400 uppercase font-bold">Futebol</p>
+                <h3 className="font-bold text-slate-800 text-xs">Leonardo Coelho</h3>
+                <p className="text-[9px] text-slate-500">Dir. Coord. Futebol</p>
               </div>
            </div>
-           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-              <img src="https://ui-avatars.com/api/?name=Pedro+Tardin&background=94a3b8&color=fff&size=128" alt="Pedro" className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+           <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+              <img src="https://ui-avatars.com/api/?name=Pedro+Tardin&background=94a3b8&color=fff&size=128" alt="Pedro" className="w-10 h-10 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">Operações</p>
-                <h3 className="font-bold text-slate-800 text-sm">Pedro Tardin</h3>
-                <p className="text-[10px] text-slate-500">Diretor de Operações</p>
+                <p className="text-[9px] text-slate-400 uppercase font-bold">Operações</p>
+                <h3 className="font-bold text-slate-800 text-xs">Pedro Tardin</h3>
+                <p className="text-[9px] text-slate-500">Diretor de Operações</p>
               </div>
            </div>
-           <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-              <img src="https://ui-avatars.com/api/?name=Lucas+Pires&background=94a3b8&color=fff&size=128" alt="Lucas" className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+           <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+              <img src="https://ui-avatars.com/api/?name=Lucas+Pires&background=94a3b8&color=fff&size=128" alt="Lucas" className="w-10 h-10 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">Matchday</p>
-                <h3 className="font-bold text-slate-800 text-sm">Lucas Pires</h3>
-                <p className="text-[10px] text-slate-500">Ger. Plan. Arena</p>
+                <p className="text-[9px] text-slate-400 uppercase font-bold">Matchday</p>
+                <h3 className="font-bold text-slate-800 text-xs">Lucas Pires</h3>
+                <p className="text-[9px] text-slate-500">Ger. Plan. Arena</p>
+              </div>
+           </div>
+           <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+              <img src="https://ui-avatars.com/api/?name=Pedro+Souto&background=94a3b8&color=fff&size=128" alt="Pedro S" className="w-10 h-10 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+              <div>
+                <p className="text-[9px] text-slate-400 uppercase font-bold">Marketing</p>
+                <h3 className="font-bold text-slate-800 text-xs">Pedro Souto</h3>
+                <p className="text-[9px] text-slate-500">Dir. Mkt & Merch.</p>
               </div>
            </div>
         </div>
@@ -596,7 +655,12 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort, user
   };
 
   const totalInvestment = plans.reduce((acc, plan) => acc + (parseFloat(plan.investment) || 0), 0);
-  const totalCost2025 = plans.reduce((acc, plan) => acc + (parseFloat(plan.cost2025) || 0), 0);
+  
+  const totalCost2025 = plans.reduce((acc, plan) => {
+      if (plan.considerCost === false) return acc;
+      return acc + (parseFloat(plan.cost2025) || 0);
+  }, 0);
+
   const totalSavings = plans.reduce((acc, plan) => acc + (parseFloat(plan.savings) || 0), 0);
 
   const SortableHeader = ({ label, sortKey, align = "left", width }) => (
@@ -679,7 +743,7 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort, user
                   <MoneyDisplay value={plan.investment} size="sm" />
                 </td>
                 <td className="px-4 py-4 align-middle text-right">
-                  <MoneyDisplay value={plan.cost2025} size="sm" />
+                  <MoneyDisplay value={plan.cost2025} size="sm" ignored={plan.considerCost === false} />
                 </td>
                 <td className="px-4 py-4 align-middle text-right">
                   <div className="text-sm font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 text-center">
@@ -715,14 +779,15 @@ const TableView = ({ plans, onEdit, onDelete, onFilter, sortConfig, onSort, user
 
 // --- VISÃO DASHBOARD ---
 const Dashboard = ({ plans }) => {
-  const sumSafe = (items, field) => items.reduce((acc, item) => {
+  const sumSafe = (items, field, checkIgnored = false) => items.reduce((acc, item) => {
+    if (checkIgnored && item.considerCost === false) return acc;
     const val = parseFloat(item[field]);
     return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
   const totalSavings = sumSafe(plans, 'savings');
-  const totalCost = sumSafe(plans, 'cost2025');
-  const totalInvestment = sumSafe(plans, 'investment');
+  const totalCost = sumSafe(plans, 'cost2025', true); // Check ignored!
+  const totalInvestment = sumSafe(plans, 'investment', false); // Do NOT check ignored
   const roi = totalInvestment > 0 ? ((totalSavings - totalInvestment) / totalInvestment) * 100 : 0;
   
   const statusCount = plans.reduce((acc, p) => {
@@ -975,11 +1040,23 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
               <div className="grid grid-cols-3 gap-4">
                  <div className="col-span-1">
                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Data Início</label>
-                   <input name="startDate" value={formData.startDate} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2" placeholder="DD/MM/AAAA" />
+                   <input 
+                      type="month"
+                      name="startDate" 
+                      value={getMonthInputValue(formData.startDate)} 
+                      onChange={handleInputChange} 
+                      className="w-full text-sm border border-slate-200 rounded p-2" 
+                    />
                  </div>
                  <div className="col-span-1">
                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Data Fim Estimada</label>
-                   <input name="endDate" value={formData.endDate} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2" placeholder="DD/MM/AAAA" />
+                   <input 
+                      type="month"
+                      name="endDate" 
+                      value={getMonthInputValue(formData.endDate)} 
+                      onChange={handleInputChange} 
+                      className="w-full text-sm border border-slate-200 rounded p-2" 
+                    />
                  </div>
                  <div className="col-span-1">
                    <label className="text-[10px] uppercase font-bold text-slate-400 mb-1 block">Fornecedor Atual</label>
@@ -994,6 +1071,17 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
                   <div>
                       <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 block">Custo 2025</label>
                       <input name="cost2025" value={formData.cost2025} onChange={handleInputChange} className="w-full text-sm border border-slate-200 rounded p-2 bg-slate-50" />
+                      <div className="flex items-center gap-2 mt-1">
+                        <input 
+                            type="checkbox" 
+                            name="considerCost"
+                            id="considerCost"
+                            checked={formData.considerCost !== false} 
+                            onChange={handleInputChange}
+                            className="rounded border-slate-300 text-blue-600 w-3 h-3"
+                        />
+                        <label htmlFor="considerCost" className="text-[9px] text-slate-500 font-bold uppercase cursor-pointer select-none">Considerar no Total?</label>
+                      </div>
                   </div>
                   <div>
                       <label className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1 block">Economia Estimada</label>
@@ -1116,6 +1204,9 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
            <h3 className="font-bold text-lg text-slate-900 leading-tight line-clamp-2" title={plan.title}>
              {plan.title}
            </h3>
+           <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+             <div className="flex items-center gap-1"><Calendar size={12}/> {formatMonthYear(plan.startDate)} - {formatMonthYear(plan.endDate)}</div>
+           </div>
         </div>
         <div className="flex flex-col justify-center min-h-[3rem] mb-4 space-y-1">
            <button onClick={() => onFilter('leader', plan.leader)} className="flex items-center gap-2 text-xs text-slate-600 hover:text-blue-600 transition-colors w-fit">
@@ -1127,10 +1218,10 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
         </div>
         <div className="grid grid-cols-3 gap-0 bg-slate-50 rounded-lg border border-slate-200 min-h-[5rem] mb-5 overflow-hidden">
            <div className="col-span-1 border-r border-slate-200 flex items-center justify-center text-center p-2 hover:bg-slate-100 transition-colors">
-              <MoneyDisplay label="INVESTIMENTO NECESSÁRIO" value={plan.investment} />
+              <MoneyDisplay label="INVESTIMENTO NECESSÁRIO" value={plan.investment} ignored={plan.considerCost === false} />
            </div>
            <div className="col-span-1 border-r border-slate-200 flex items-center justify-center text-center p-2 hover:bg-slate-100 transition-colors">
-              <MoneyDisplay label="CUSTO EM 2025" value={plan.cost2025} />
+              <MoneyDisplay label="CUSTO EM 2025" value={plan.cost2025} ignored={plan.considerCost === false} />
            </div>
            <div className="col-span-1 flex items-center justify-center text-center p-2 bg-emerald-50/30 hover:bg-emerald-100/50 transition-colors">
               <MoneyDisplay label="ECONOMIA ESTIMADA" value={plan.savings} highlight />
@@ -1327,6 +1418,7 @@ export default function AusterityApp() {
           "Fase": p.phase,
           "Investimento Necessário": p.investment,
           "Custo em 2025": p.cost2025,
+          "Considerar Custo?": p.considerCost !== false ? "Sim" : "Não",
           "Economia Esperada": p.savings,
           "Status": p.status,
           "Notas": p.notes,
@@ -1388,6 +1480,7 @@ export default function AusterityApp() {
         status: "Não Iniciado",
         progress: 0,
         checklist: [],
+        considerCost: true,
         createdAt: new Date().toISOString()
       };
       await addDoc(collection(db, 'plans'), newPlan);
@@ -1453,6 +1546,7 @@ export default function AusterityApp() {
                 phase: row['Fase'] || row['Phase'] || 1,
                 investment: row['Investimento Necessário'] || row['Investment'] || 0,
                 cost2025: row['Custo em 2025'] || row['Cost 2025'] || 0,
+                considerCost: (row['Considerar Custo?'] !== 'Não'),
                 savings: row['Economia Esperada'] || row['Expected Savings'] || 0,
                 status: row['Status'] || "Não Iniciado",
                 notes: row['Notas'] || row['Notes'] || "",
@@ -1548,6 +1642,7 @@ export default function AusterityApp() {
   }, 0);
 
   const totalInvestmentFiltered = sortedPlans.reduce((acc, p) => {
+      // Ignored check removed as requested
       const val = parseFloat(p.investment);
       return acc + (isNaN(val) ? 0 : val);
   }, 0);
