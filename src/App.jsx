@@ -1218,7 +1218,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
         </div>
         <div className="grid grid-cols-3 gap-0 bg-slate-50 rounded-lg border border-slate-200 min-h-[5rem] mb-5 overflow-hidden">
            <div className="col-span-1 border-r border-slate-200 flex items-center justify-center text-center p-2 hover:bg-slate-100 transition-colors">
-              <MoneyDisplay label="INVESTIMENTO NECESSÁRIO" value={plan.investment} ignored={plan.considerCost === false} />
+              <MoneyDisplay label="INVESTIMENTO NECESSÁRIO" value={plan.investment} />
            </div>
            <div className="col-span-1 border-r border-slate-200 flex items-center justify-center text-center p-2 hover:bg-slate-100 transition-colors">
               <MoneyDisplay label="CUSTO EM 2025" value={plan.cost2025} ignored={plan.considerCost === false} />
@@ -1457,38 +1457,60 @@ export default function AusterityApp() {
     XLSX.writeFile(wb, "plano_austeridade_completo.xlsx");
   };
 
+  // --- NEW: Handle Save Plan (Creates or Updates) ---
   const handleSavePlan = async (id, updatedData) => {
-     try { await updateDoc(doc(db, 'plans', id), updatedData); } 
+     try { 
+        if (id === 'NEW_TEMP_PLAN') {
+            // Remove the temp ID before saving to let Firebase generate a new ID
+            const { id: _, ...dataToSave } = updatedData;
+            await addDoc(collection(db, 'plans'), dataToSave);
+        } else {
+            await updateDoc(doc(db, 'plans', id), updatedData); 
+        }
+     } 
      catch (e) { alert("Erro ao salvar: " + e.message); }
   };
 
   const handleDeletePlan = async (id) => {
+      if (id === 'NEW_TEMP_PLAN') return; 
       if (confirm("Tem certeza que deseja excluir esta ação?")) {
           await deleteDoc(doc(db, 'plans', id));
       }
   };
 
-  const handleCreatePlan = async () => {
-    try {
-      setFilters({ package: '', area: '', leader: '', search: '', status: '', approval: '', phase: '' });
-      const newPlan = {
-        title: "Nova Ação de Austeridade",
-        package: "Geral",
-        area: "A definir",
-        leader: "A definir",
-        description: "Descreva a iniciativa aqui...",
-        status: "Não Iniciado",
-        progress: 0,
-        checklist: [],
-        considerCost: true,
-        createdAt: new Date().toISOString()
-      };
-      await addDoc(collection(db, 'plans'), newPlan);
-      if(currentView === 'dashboard') setCurrentView('list');
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao criar ação: " + e.message);
-    }
+  // --- NEW: Handle Create Plan (Just opens modal) ---
+  const handleCreatePlan = () => {
+    // Reset filters
+    setFilters({ package: '', area: '', leader: '', search: '', status: '', approval: '', phase: '' });
+    
+    // Create temp object in memory
+    const newPlanTemplate = {
+      id: 'NEW_TEMP_PLAN',
+      title: "",
+      package: "",
+      area: "",
+      leader: "",
+      description: "",
+      supplier: "",
+      startDate: "",
+      endDate: "",
+      phase: 1, 
+      investment: "",
+      cost2025: "",
+      savings: "",
+      status: "Não Iniciado",
+      progress: 0,
+      checklist: [],
+      considerCost: true,
+      createdAt: new Date().toISOString(),
+      requiresApproval: false,
+      notes: ""
+    };
+    
+    // Open modal immediately
+    setEditingPlan(newPlanTemplate);
+    // Ensure we are in a view where the modal makes sense contextually (optional but good UX)
+    if(currentView === 'dashboard' || currentView === 'presentation') setCurrentView('list');
   };
 
   const handleClearDatabase = async () => {
@@ -1642,7 +1664,6 @@ export default function AusterityApp() {
   }, 0);
 
   const totalInvestmentFiltered = sortedPlans.reduce((acc, p) => {
-      // Ignored check removed as requested
       const val = parseFloat(p.investment);
       return acc + (isNaN(val) ? 0 : val);
   }, 0);
