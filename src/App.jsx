@@ -512,8 +512,8 @@ const CommitteePresentation = ({ plans }) => {
                 <div><p className="text-[10px] text-slate-600 uppercase font-bold">Sponsor</p><h3 className="font-bold text-slate-800 text-sm">Anderson Santos</h3><p className="text-[10px] text-slate-500">CFO</p></div>
               </div>
               <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 border border-slate-100"><User size={20}/></div>
-                <div><p className="text-[10px] text-slate-400 uppercase font-bold">Membro do Projeto</p><h3 className="font-bold text-slate-800 text-sm">A Definir</h3><p className="text-[10px] text-slate-500">Coord. Controladoria</p></div>
+                <img src="https://ui-avatars.com/api/?name=Gabriel+Vabo&background=475569&color=fff&size=128" alt="Gabriel" className="w-10 h-10 rounded-full object-cover border border-slate-100" />
+                <div><p className="text-[10px] text-slate-400 uppercase font-bold">Membro do Projeto</p><h3 className="font-bold text-slate-800 text-sm">Gabriel Vabo</h3><p className="text-[10px] text-slate-500">Coord. Controladoria</p></div>
               </div>
             </div>
           </div>
