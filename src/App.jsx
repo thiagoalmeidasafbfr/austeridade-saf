@@ -837,16 +837,7 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
     if (startEditing) setIsEditing(true);
   }, [plan, startEditing]);
 
-  useEffect(() => {
-    if (formData.checklist && formData.checklist.length > 0) {
-      const completed = formData.checklist.filter(i => i.checked).length;
-      const total = formData.checklist.length;
-      const calcProgress = Math.round((completed / total) * 100);
-      if (calcProgress !== formData.progress) {
-        setFormData(prev => ({ ...prev, progress: calcProgress }));
-      }
-    }
-  }, [formData.checklist]);
+
 
   const handleClose = () => {
     setIsEditing(false);
@@ -979,13 +970,13 @@ const PlanCard = ({ plan, onSave, onDelete, startEditing = false, onCloseEdit, o
               </div>
               <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-500">Progresso {formData.checklist?.length > 0 ? "(Automático via Checklist)" : "(Manual)"}</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-500">Progresso</label>
                   <div className="flex items-center bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
-                    <input type="number" min="0" max="100" name="progress" value={progress} onChange={handleInputChange} disabled={formData.checklist?.length > 0} className="w-10 text-right text-xs font-bold text-blue-600 outline-none border-none p-0 disabled:text-slate-400" />
+                    <input type="number" min="0" max="100" name="progress" value={progress} onChange={handleInputChange} className="w-10 text-right text-xs font-bold text-blue-600 outline-none border-none p-0" />
                     <span className="text-[10px] font-bold text-slate-400 ml-1">%</span>
                   </div>
                 </div>
-                <input type="range" min="0" max="100" step="1" value={progress} name="progress" onChange={handleInputChange} disabled={formData.checklist?.length > 0} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:accent-slate-400" />
+                <input type="range" min="0" max="100" step="1" value={progress} name="progress" onChange={handleInputChange} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
               </div>
               <div className="flex flex-col"><label className="text-xs uppercase font-bold text-slate-400 mb-1.5">Notas / Observações</label><textarea name="notes" value={formData.notes || ""} onChange={handleInputChange} className="w-full text-sm border border-slate-300 rounded p-2 min-h-[60px]" placeholder="Observações internas..." /></div>
             </>
