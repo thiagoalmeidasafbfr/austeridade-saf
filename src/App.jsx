@@ -627,7 +627,7 @@ const CommitteePresentation = ({ plans }) => {
         </div>
         <div className="md:col-span-3 bg-slate-800 text-slate-300 p-8 rounded-xl shadow-md flex flex-col justify-center">
           <h3 className="text-white font-bold text-xl mb-4 flex items-center gap-2"><CalendarCheck className="text-blue-400"/> Acompanhamento</h3>
-          <p className="text-base text-slate-200 leading-relaxed font-light">Será realizada reunião mensal com os 16 líderes de iniciativas para acompanhamento da implementação de cada ação, a ser reportado na Reunião Geral de Resultados.</p>
+          <p className="text-base text-slate-200 leading-relaxed font-light">Será realizada reunião mensal com os principais líderes de iniciativas para acompanhamento da implementação de cada ação, a ser reportado na Reunião Geral de Resultados.</p>
         </div>
       </section>
 
