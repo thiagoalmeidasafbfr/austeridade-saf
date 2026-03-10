@@ -156,12 +156,31 @@ const SimpleBarChart = ({ data }) => {
 // --- COMPONENTE: VISUALIZAÇÃO DE ACOMPANHAMENTO MENSAL ---
 // ============================================================
 const MonthlyTrackingView = ({ tracking }) => {
+  const [viewMode, setViewMode] = useState('monthly'); // 'monthly' | 'ytd'
+
   const data2025 = tracking?.["2025"] || {};
   const data2026 = tracking?.["2026"] || {};
 
-  const hasAnyData = MONTH_KEYS.some(k => data2025[k] || data2026[k]);
+  const hasAnyData = MONTH_KEYS.some(k => data2025[k] != null || data2026[k] != null);
 
-  // YTD totals
+  // Acumulados YTD por mês
+  const ytdByMonth = useMemo(() => {
+    let acc25 = 0, acc26 = 0;
+    return MONTH_KEYS.map(k => {
+      const v25 = parseFloat(data2025[k]) || 0;
+      const v26 = parseFloat(data2026[k]) || 0;
+      const has25 = data2025[k] != null;
+      const has26 = data2026[k] != null;
+      if (has25) acc25 += v25;
+      if (has26) acc26 += v26;
+      const hasAny = has25 || has26;
+      const eco = hasAny ? (acc25 - acc26) : null;
+      const pct = (acc25 > 0 && hasAny) ? ((acc26 - acc25) / acc25 * 100) : null;
+      return { acc25: has25 ? acc25 : null, acc26: has26 ? acc26 : null, eco, pct };
+    });
+  }, [data2025, data2026]);
+
+  // Totais YTD finais
   const ytd2025 = MONTH_KEYS.reduce((acc, k) => acc + (parseFloat(data2025[k]) || 0), 0);
   const ytd2026 = MONTH_KEYS.reduce((acc, k) => acc + (parseFloat(data2026[k]) || 0), 0);
   const ytdEco = ytd2025 - ytd2026;
@@ -206,12 +225,30 @@ const MonthlyTrackingView = ({ tracking }) => {
         </div>
       </div>
 
-      {/* Tabela mensal scrollável */}
+      {/* Toggle Mensal / YTD */}
+      <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setViewMode('monthly')}
+          className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wide transition-all ${viewMode === 'monthly' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          Mês a Mês
+        </button>
+        <button
+          onClick={() => setViewMode('ytd')}
+          className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wide transition-all ${viewMode === 'ytd' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          YTD Acumulado
+        </button>
+      </div>
+
+      {/* Tabela scrollável */}
       <div className="overflow-x-auto rounded-lg border border-slate-200">
         <table className="min-w-full text-[10px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left font-bold text-slate-400 uppercase text-[9px] z-10 min-w-[56px]">Ano</th>
+              <th className="sticky left-0 bg-slate-50 px-3 py-2 text-left font-bold text-slate-400 uppercase text-[9px] z-10 min-w-[56px]">
+                {viewMode === 'ytd' ? 'Acum.' : 'Ano'}
+              </th>
               {MONTHS.map((m, i) => (
                 <th key={i} className="px-2 py-2 text-center font-bold text-slate-400 uppercase text-[9px] min-w-[52px] whitespace-nowrap">{m}</th>
               ))}
@@ -221,29 +258,46 @@ const MonthlyTrackingView = ({ tracking }) => {
             {/* 2025 */}
             <tr className="hover:bg-slate-50/70 transition-colors">
               <td className="sticky left-0 bg-white px-3 py-2 font-bold text-slate-500 text-[10px] border-r border-slate-100 z-10">2025</td>
-              {MONTH_KEYS.map((k, i) => (
-                <td key={i} className="px-2 py-2 text-center text-slate-600">
-                  {data2025[k] ? fmtCompact(parseFloat(data2025[k])) : <span className="text-slate-200">—</span>}
-                </td>
-              ))}
+              {MONTH_KEYS.map((k, i) => {
+                const val = viewMode === 'monthly'
+                  ? (data2025[k] != null ? parseFloat(data2025[k]) : null)
+                  : ytdByMonth[i].acc25;
+                return (
+                  <td key={i} className="px-2 py-2 text-center text-slate-600">
+                    {val != null ? fmtCompact(val) : <span className="text-slate-200">—</span>}
+                  </td>
+                );
+              })}
             </tr>
             {/* 2026 */}
             <tr className="hover:bg-blue-50/30 transition-colors bg-blue-50/10">
               <td className="sticky left-0 bg-blue-50/20 px-3 py-2 font-bold text-blue-600 text-[10px] border-r border-blue-100 z-10">2026</td>
-              {MONTH_KEYS.map((k, i) => (
-                <td key={i} className="px-2 py-2 text-center text-blue-700 font-medium">
-                  {data2026[k] ? fmtCompact(parseFloat(data2026[k])) : <span className="text-slate-200">—</span>}
-                </td>
-              ))}
+              {MONTH_KEYS.map((k, i) => {
+                const val = viewMode === 'monthly'
+                  ? (data2026[k] != null ? parseFloat(data2026[k]) : null)
+                  : ytdByMonth[i].acc26;
+                return (
+                  <td key={i} className="px-2 py-2 text-center text-blue-700 font-medium">
+                    {val != null ? fmtCompact(val) : <span className="text-slate-200">—</span>}
+                  </td>
+                );
+              })}
             </tr>
             {/* Economia */}
             <tr className="bg-emerald-50/20 hover:bg-emerald-50/40 transition-colors">
-              <td className="sticky left-0 bg-emerald-50/30 px-3 py-2 font-bold text-emerald-700 text-[10px] border-r border-emerald-100 z-10 whitespace-nowrap">Econ. R$</td>
+              <td className="sticky left-0 bg-emerald-50/30 px-3 py-2 font-bold text-emerald-700 text-[10px] border-r border-emerald-100 z-10 whitespace-nowrap">
+                {viewMode === 'ytd' ? 'Econ. Acum.' : 'Econ. R$'}
+              </td>
               {MONTH_KEYS.map((k, i) => {
-                const v25 = parseFloat(data2025[k]) || 0;
-                const v26 = parseFloat(data2026[k]) || 0;
-                const hasVal = data2025[k] || data2026[k];
-                const eco = hasVal ? (v25 - v26) : null;
+                let eco;
+                if (viewMode === 'monthly') {
+                  const v25 = parseFloat(data2025[k]) || 0;
+                  const v26 = parseFloat(data2026[k]) || 0;
+                  const hasVal = data2025[k] != null || data2026[k] != null;
+                  eco = hasVal ? (v25 - v26) : null;
+                } else {
+                  eco = ytdByMonth[i].eco;
+                }
                 return (
                   <td key={i} className={`px-2 py-2 text-center font-semibold ${eco === null ? '' : eco >= 0 ? 'text-emerald-700' : 'text-red-500'}`}>
                     {eco === null ? <span className="text-slate-200">—</span> : fmtCompact(eco)}
@@ -253,15 +307,22 @@ const MonthlyTrackingView = ({ tracking }) => {
             </tr>
             {/* Variação % */}
             <tr className="bg-slate-50/50 hover:bg-slate-50 transition-colors">
-              <td className="sticky left-0 bg-slate-50/70 px-3 py-2 font-bold text-slate-400 text-[10px] border-r border-slate-100 z-10">Var%</td>
+              <td className="sticky left-0 bg-slate-50/70 px-3 py-2 font-bold text-slate-400 text-[10px] border-r border-slate-100 z-10 whitespace-nowrap">
+                {viewMode === 'ytd' ? 'Var% Acum.' : 'Var%'}
+              </td>
               {MONTH_KEYS.map((k, i) => {
-                const v25 = parseFloat(data2025[k]) || 0;
-                const v26 = parseFloat(data2026[k]) || 0;
-                const pct = (v25 > 0 && data2026[k] != null) ? ((v26 - v25) / v25 * 100) : null;
+                let pct;
+                if (viewMode === 'monthly') {
+                  const v25 = parseFloat(data2025[k]) || 0;
+                  const v26 = parseFloat(data2026[k]) || 0;
+                  pct = (v25 > 0 && data2026[k] != null) ? ((v26 - v25) / v25 * 100) : null;
+                } else {
+                  pct = ytdByMonth[i].pct;
+                }
                 return (
                   <td key={i} className={`px-2 py-2 text-center font-bold ${pct === null ? '' : pct <= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {pct === null 
-                      ? <span className="text-slate-200">—</span> 
+                    {pct === null
+                      ? <span className="text-slate-200">—</span>
                       : <span>{pct > 0 ? '+' : ''}{pct.toFixed(1)}%</span>
                     }
                   </td>
