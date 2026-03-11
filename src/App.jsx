@@ -201,7 +201,7 @@ const MonthlyTrackingView = ({ tracking }) => {
       {/* KPIs YTD resumidos */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-center">
-          <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">YTD 2025</p>
+          <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Spent 2025</p>
           <p className="text-xs font-bold text-slate-700">{ytd2025 > 0 ? fmtCompact(ytd2025) : "—"}</p>
         </div>
         <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-2 text-center">
