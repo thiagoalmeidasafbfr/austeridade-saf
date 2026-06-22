@@ -32,3 +32,6 @@ Variáveis de Ambiente (Segurança)
 .env
 .env.*
 !.env.example
+
+# Claude Code internal
+.claude/
